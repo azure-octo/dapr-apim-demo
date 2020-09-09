@@ -29,7 +29,7 @@ az apim create --name daprapimdemo \
                --publisher-name "OCTO Azure"
 ```
 
-> Note, this operation will take a while (~10 min depending on your configuration)
+> Note, depending on your configuration, this operation may take 10+ min
 
 Update the [api.yaml](./api.yaml) with the `gatewayUrl`
 
