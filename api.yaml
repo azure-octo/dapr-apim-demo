@@ -8,9 +8,9 @@ servers:
 paths:
   /echo:
     post:
-      summary: invoke
-      description: Invoke echo service
-      operationId: post-echo
+      summary: Invoke service
+      description: Invoke service using Dapr API
+      operationId: echo
       requestBody:
         content:
           application/json:

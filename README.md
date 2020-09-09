@@ -74,7 +74,7 @@ curl -v -X PUT -d @./policy.json \
      -H "Content-Type: application/json" \
      -H "If-Match: *" \
      -H "Authorization: Bearer ${AZ_API_TOKEN}" \
-     "https://management.azure.com${AZ_API_ID}/operations/post-echo/policies/policy?api-version=2019-12-01"
+     "https://management.azure.com${AZ_API_ID}/operations/echo/policies/policy?api-version=2019-12-01"
 ```
 
 > Note, this succeeds (status code 201) and the valid, created policy is returned by the API but when you go to Azure portal it displays an error that the policies could not be loaded, come again later. Is it just a readiness check issue? The policy is eventually created and visible in portal.
