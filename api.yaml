@@ -1,0 +1,32 @@
+openapi: 3.0.1
+info:
+  title: echo-service
+  version: '1.0'
+servers:
+  - url: http://daprapimdemo.azure-api.net
+  - url: https://daprapimdemo.azure-api.net
+paths:
+  /echo:
+    post:
+      summary: Invoke echo service
+      requestBody:
+        content:
+          application/json:
+            example:
+              message: hello
+      responses:
+        '200':
+          description: ''
+components:
+  securitySchemes:
+    apiKeyHeader:
+      type: apiKey
+      name: Ocp-Apim-Subscription-Key
+      in: header
+    apiKeyQuery:
+      type: apiKey
+      name: subscription-key
+      in: query
+security:
+  - apiKeyHeader: [ ]
+  - apiKeyQuery: [ ]

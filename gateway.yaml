@@ -1,0 +1,78 @@
+# NOTE: Before deploying to a production environment, please review the documentation -> https://aka.ms/self-hosted-gateway-production
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: daprdemo-gateway-env
+data:
+  config.service.endpoint: "https://daprapimdemo.management.azure-api.net/subscriptions/2865c7d1-29fa-485a-8862-717377bdbf1b/resourceGroups/mchmarny/providers/Microsoft.ApiManagement/service/daprapimdemo?api-version=2019-12-01"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: daprdemo-gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: daprdemo-gateway
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 25%
+  template:
+    metadata:
+      labels:
+        app: daprdemo-gateway
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "daprdemo-gateway"
+        dapr.io/config: "tracing"
+        dapr.io/log-as-json: "true"
+        dapr.io/log-level: "debug"
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+      - name: daprdemo-gateway
+        image: mcr.microsoft.com/azure-api-management/gateway:latest
+        ports:
+        - name: http
+          containerPort: 8080
+        - name: https
+          containerPort: 8081
+        readinessProbe:
+          httpGet:
+            path: /internal-status-0123456789abcdef
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 0
+          periodSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+        env:
+        - name: config.service.auth
+          valueFrom:
+            secretKeyRef:
+              name: daprdemo-gateway-token
+              key: value
+        envFrom:
+        - configMapRef:
+            name: daprdemo-gateway-env
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: daprdemo-gateway
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+  - name: https
+    port: 443
+    targetPort: 8081
+  selector:
+    app: daprdemo-gateway
