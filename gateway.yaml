@@ -36,7 +36,6 @@ spec:
       containers:
       - name: gw1
         image: mcr.microsoft.com/azure-api-management/gateway:beta
-        imagePullPolicy: Always
         ports:
         - name: http
           containerPort: 8080

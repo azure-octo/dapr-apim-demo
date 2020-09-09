@@ -47,7 +47,8 @@ Make sure you save the [api.yaml](./api.yaml) when finished and now import it in
 az apim api import --path /echo \
                    --service-name daprapimdemo \
                    --display-name echo-service \
-                   --protocols http \
+                   --api-type http \
+                   --protocols http https \
                    --subscription-required false \
                    --specification-path api.yaml \
                    --specification-format OpenApi
@@ -134,7 +135,7 @@ kubectl rollout status deployment/daprdemo-gateway
 Create a secret 
 
 ```shell
-kubectl create secret generic gw1-token --type=Opaque --from-literal=value="GatewayKey ..."  
+kubectl create secret generic gw1-token --type=Opaque --from-literal=value="GatewayKey ..."
 ```
 
 Augment the deployment template metadata with Dapr annotations:
@@ -144,7 +145,7 @@ Augment the deployment template metadata with Dapr annotations:
 ```yaml
 annotations:
     dapr.io/enabled: "true"
-    dapr.io/app-id: "daprdemo-gateway"
+    dapr.io/app-id: "gw1"
     dapr.io/config: "tracing"
     dapr.io/log-as-json: "true"
     dapr.io/log-level: "debug"
@@ -168,19 +169,21 @@ gw1-7896ddc989-ts8cm   2/2     Running   0          26s
 ## Test
 
 ```shell
-export GATEWAY_IP=$(kubectl get svc gw1 -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-```
-
-```shell
-curl -v -d '{"message": "hello"}' \
-     -H "Ocp-Apim-Trace: true" \
-     -H "Content-Type: application/json" \
-     "http://${GATEWAY_IP}/echo"
-
-curl -v -d '{"message": "hello"}' \
+curl -v -X POST -d '{ "message": "hello" }' \
      -H "Ocp-Apim-Trace: true" \
      -H "Content-Type: application/json" \
      http://daprapimdemo.azure-api.net/echo
+```
+
+Or using the local service 
+
+```shell
+export GATEWAY_IP=$(kubectl get svc gw1 -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+
+curl -v -X POST -d '{ "message": "hello" }' \
+     -H "Ocp-Apim-Trace: true" \
+     -H "Content-Type: application/json" \
+     "http://${GATEWAY_IP}/echo"
 ```
 
 ## Debug 
@@ -192,6 +195,10 @@ Check if the backing service (``) is working. First forward the service port:
 
 ```shell
 kubectl port-forward pod/echo-service-944d8684b-nbzxz 3500:3500
+```
+
+```shell
+export GATEWAY_IP=$(kubectl get svc gw1 -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 ```
 
 Call the service using the forwarded port 
@@ -222,5 +229,8 @@ If you see entries about inability to `match incoming request to an operation` c
 ## Cleanup 
 
 ```shell
+kubectl delete -f ./gateway.yaml
+kubectl apply -f ./service.yaml
+kubectl delete secret gw1-token
 az apim delete --name daprapimdemo --no-wait --yes
 ```
