@@ -72,6 +72,36 @@ curl -v -X PUT -d @./policy.json \
 
 > Note, this succeeds (status code 201) and the valid, created policy is returned by the API but when you go to Azure portal it displays an error that the policies could not be loaded, come again later. Is it just a readiness check issue? The policy is eventually created and visible in portal.
 
+Create Gateway 
+
+```shell
+export AZ_API_GATEWAY=$(echo $AZ_API_ID | rev | cut -d'/' -f3- | rev)
+```
+
+> Yes, this is all kinds of voodoo to get make this reproducible without asking you to cut and paste parts of the ID.
+
+```shell
+curl -v -X PUT -d '{"properties": {"description": "Dapr Gateway","locationData": {"name": "Virtual"}}}' \
+     -H "Content-Type: application/json" \
+     -H "If-Match: *" \
+     -H "Authorization: Bearer ${AZ_API_TOKEN}" \
+     "https://management.azure.com${AZ_API_GATEWAY}/gateways/gw1?api-version=2019-12-01"
+```
+
+Map Gateway to API
+
+```shell
+export AZ_API_OP_ID=$(echo $AZ_API_ID | cut -d'/' -f11-)
+```
+
+```shell
+curl -v -X PUT -d '{ "properties": { "provisioningState": "created" } }' \
+     -H "Content-Type: application/json" \
+     -H "If-Match: *" \
+     -H "Authorization: Bearer ${AZ_API_TOKEN}" \
+     "https://management.azure.com${AZ_API_GATEWAY}/gateways/gw1/apis/${AZ_API_OP_ID}?api-version=2019-12-01"
+```
+
 ## Dapr Service Deployment 
 
 Deploy a Dapr service and watch it until it's ready:
