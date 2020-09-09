@@ -21,6 +21,8 @@ az configure --defaults location=<preferred location> group=<preferred resource 
 
 > Note, the name of your API Management service instance name (`daprapimdemo`) has to be globally unique!
 
+### Service
+
 Create APIM service instance:
 
 ```shell
@@ -32,6 +34,8 @@ az apim create --name daprapimdemo \
 ```
 
 > Note, depending on your configuration, this operation may take 10+ min
+
+### Policy
 
 Update the [api.yaml](./api.yaml) with the `gatewayUrl`
 
@@ -75,6 +79,8 @@ curl -v -X PUT -d @./policy.json \
 
 > Note, this succeeds (status code 201) and the valid, created policy is returned by the API but when you go to Azure portal it displays an error that the policies could not be loaded, come again later. Is it just a readiness check issue? The policy is eventually created and visible in portal.
 
+### Gateway
+
 Create Gateway 
 
 ```shell
@@ -105,7 +111,11 @@ curl -v -X PUT -d '{ "properties": { "provisioningState": "created" } }' \
      "https://management.azure.com${AZ_API_GATEWAY}/gateways/gw1/apis/${AZ_API_OP_ID}?api-version=2019-12-01"
 ```
 
-## Dapr Service Deployment 
+## Kubernetes Configuration 
+
+Now, on your Kubernetes cluster...
+
+### Dapr Service Deployment 
 
 Deploy a Dapr service and watch it until it's ready:
 
@@ -128,7 +138,7 @@ kubectl rollout restart deployment/daprdemo-gateway
 kubectl rollout status deployment/daprdemo-gateway
 ```
 
-## Deploy APIM Gateway 
+### Deploy Self-hosted APIM Gateway 
 
 > Can't find any way to create a gateway programmatically (neither in Az CLI, or REST API)
 
