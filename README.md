@@ -172,9 +172,15 @@ export GATEWAY_IP=$(kubectl get svc gw1 -o jsonpath='{.status.loadBalancer.ingre
 ```
 
 ```shell
-curl -v -X POST -d '{"message": "hello"}' \
+curl -v -d '{"message": "hello"}' \
+     -H "Ocp-Apim-Trace: true" \
      -H "Content-Type: application/json" \
      "http://${GATEWAY_IP}/echo"
+
+curl -v -d '{"message": "hello"}' \
+     -H "Ocp-Apim-Trace: true" \
+     -H "Content-Type: application/json" \
+     http://daprapimdemo.azure-api.net/echo
 ```
 
 ## Debug 
