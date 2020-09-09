@@ -1,6 +1,6 @@
 # apim-dapr
 
-> NOte, this is still work in progress
+> Note, this is still work in progress
 
 ## Prerequisite 
 
