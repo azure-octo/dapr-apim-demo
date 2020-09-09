@@ -31,15 +31,6 @@ az apim create --name daprapimdemo \
 
 > Note, this operation will take a while (~10 min depending on your configuration)
 
-The resulting JSON is little long, the two fields you will need to capture are: the gateway URL, and the public IP:
-
-```json
-{
-  "gatewayUrl": "https://daprapimdemo.azure-api.net",
-  "publicIpAddresses": [ "52.250.71.202" ]
-}
-```
-
 Update the [api.yaml](./api.yaml) with the `gatewayUrl`
 
 ```yaml
@@ -97,7 +88,7 @@ NAME                            READY   STATUS    RESTARTS   AGE
 echo-service-77d6f5b5bb-crc5q   2/2     Running   0          97s
 ```
 
-If you are applying update after the gateway was deployed make sure to restart the gateway 
+> Note, you may have to restart the gateway if you have deployed/updated your service AFTER the gateway
 
 ```shell
 kubectl rollout restart deployment/daprdemo-gateway
@@ -153,6 +144,42 @@ curl -v -X POST -d '{"message": "hello"}' \
      -H "Content-Type: application/json" \
      "http://${GATEWAY_IP}/echo"
 ```
+
+## Debug 
+
+
+### Backing Service 
+
+Check if the backing service (``) is working. First forward the service port:
+
+```shell
+kubectl port-forward pod/echo-service-944d8684b-nbzxz 3500:3500
+```
+
+Call the service using the forwarded port 
+
+```shell
+curl -v -X POST -d '{"message": "hello"}' \
+     -H "Content-Type: application/json" \
+     "http://localhost:3500/v1.0/invoke/echo-service/method/echo"
+```
+
+If service is running correctly you will see status 200 (`HTTP/1.1 200 OK`) and the sent message returned `{"message": "hello"}`
+
+### Gateway 
+
+When you see `404` errors from invoking the gateway check the gateway logs 
+
+```shell
+kubectl logs -l app=daprdemo-gateway -c daprdemo-gateway
+```
+
+If you see entries about inability to `match incoming request to an operation` check your policy
+
+```shell
+[Info] 2020-09-9T01:48:03.746, time: 09/09/2020 13:48:03, apiId: 9ab8d6aa9fe64a02a860bdf91dd0ca55, apiRevision: 1, isCurrentApiRevision: 1, clientIp: 67.189.125.3, url: http://20.51.70.83/echo, method: POST, responseCode: 404, backendResponseCode: 0, requestSize: 0, responseSize: 130, clientProtocol: HTTP/1.1, totalTime: 208, backendTime: 0, clientTime: 1, cacheTime: 0, cacheType: 0, errorSource: configuration, errorReason: OperationNotFound, errorMessage: Unable to match incoming request to an operation., errorSection: backend, errorElapsed: 172, tags: 546, tokensTime: 0, invalidOpKey: 0
+```
+
 
 ## Cleanup 
 

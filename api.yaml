@@ -3,12 +3,14 @@ info:
   title: echo-service
   version: '1.0'
 servers:
-  - url: http://daprapimdemo.azure-api.net
-  - url: https://daprapimdemo.azure-api.net
+  - url: http://daprapimdemo.azure-api.net/echo
+  - url: https://daprapimdemo.azure-api.net/echo
 paths:
   /echo:
     post:
-      summary: Invoke echo service
+      summary: invoke
+      description: Invoke echo service
+      operationId: post-echo
       requestBody:
         content:
           application/json:
@@ -30,3 +32,4 @@ components:
 security:
   - apiKeyHeader: [ ]
   - apiKeyQuery: [ ]
+
