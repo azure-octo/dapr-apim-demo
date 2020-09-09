@@ -132,7 +132,7 @@ kubectl rollout status deployment/daprdemo-gateway
 Create a secret 
 
 ```shell
-kubectl create secret generic daprdemo-token --type=Opaque --from-literal=value="GatewayKey ..."  
+kubectl create secret generic gw1-token --type=Opaque --from-literal=value="GatewayKey ..."  
 ```
 
 Augment the deployment template metadata with Dapr annotations:
@@ -152,21 +152,21 @@ Deploy gateway
 
 ```shell
 kubectl apply -f ./gateway.yaml
-watch kubectl get pods -l app=daprdemo-gateway
+watch kubectl get pods -l app=gw1
 ```
 
 Wait for both instances (required for rolling upgrades) are status `STATUS` and container is ready `1/1`.
 
 ```shell
-NAME                                READY   STATUS    RESTARTS   AGE
-daprdemo-gateway-7896ddc989-m4lmm   2/2     Running   0          26s
-daprdemo-gateway-7896ddc989-ts8cm   2/2     Running   0          26s
+NAME                           READY   STATUS    RESTARTS   AGE
+gw1-7896ddc989-m4lmm   2/2     Running   0          26s
+gw1-7896ddc989-ts8cm   2/2     Running   0          26s
 ```
 
 ## Test
 
 ```shell
-export GATEWAY_IP=$(kubectl get svc daprdemo-gateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+export GATEWAY_IP=$(kubectl get svc gw1 -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 ```
 
 ```shell
@@ -201,7 +201,7 @@ If service is running correctly you will see status 200 (`HTTP/1.1 200 OK`) and 
 When you see `404` errors from invoking the gateway check the gateway logs 
 
 ```shell
-kubectl logs -l app=daprdemo-gateway -c daprdemo-gateway
+kubectl logs -l app=gw1 -c gw1 -f
 ```
 
 If you see entries about inability to `match incoming request to an operation` check your policy
