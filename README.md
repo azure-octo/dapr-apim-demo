@@ -1,4 +1,4 @@
-# Azure API Management Dapr Integration Demo  
+# Dapr & Azure API Management Integration Demo
 
 This repo demonstrates how to expose Dapr API and invoke a service on Kubernetes using [Azure API Management](https://azure.microsoft.com/en-us/services/api-management/) (APIM) self-hosted gateway.
 
