@@ -6,7 +6,7 @@ This demo walks through creation of Azure API Management (APIM) service and expo
 
 * [Azure account](https://azure.microsoft.com/en-us/free/)
 * [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest)
-* [Kubernetes with Dapr](https://github.com/mchmarny/dapr-demos/tree/master/setup)
+* [Kubernetes cluster with Dapr](https://github.com/dapr/docs/tree/master/howto/deploy-k8s-prod#guidelines-for-production-ready-deployments-on-kubernetes)
 
 ## Setup 
 
