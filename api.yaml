@@ -3,8 +3,8 @@ info:
   title: echo-service
   version: '1.0'
 servers:
-  - url: http://daprapimdemo.azure-api.net/echo
-  - url: https://daprapimdemo.azure-api.net/echo
+  - url: http://daprapimdemo.azure-api.net
+  - url: https://daprapimdemo.azure-api.net
 paths:
   /echo:
     post:

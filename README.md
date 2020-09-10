@@ -179,21 +179,14 @@ gw1-7896ddc989-ts8cm   2/2     Running   0          26s
 ## Test
 
 ```shell
-curl -v -X POST -d '{ "message": "hello" }' \
-     -H "Ocp-Apim-Trace: true" \
-     -H "Content-Type: application/json" \
-     http://daprapimdemo.azure-api.net/echo
-```
-
-Or using the local service 
-
-```shell
 export GATEWAY_IP=$(kubectl get svc gw1 -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 
 curl -v -X POST -d '{ "message": "hello" }' \
-     -H "Ocp-Apim-Trace: true" \
      -H "Content-Type: application/json" \
      "http://${GATEWAY_IP}/echo"
+
+
+     curl http://${GATEWAY_IP}/internal-status-0123456789abcdef
 ```
 
 ## Debug 
