@@ -10,9 +10,15 @@
 
 ## Setup 
 
-To make this demo easier to reproduce, export the name desired name of Azure API Management (APIM) service as well as the Azure [Subscription ID](https://docs.bitnami.com/azure/faq/administration/find-subscription-id/) and [Resource Group](https://docs.bitnami.com/azure/faq/administration/find-deployment-resourcegroup-id/) under which you would like to create that APIM service.
+To make this demo easier to reproduce, start by exporting the name of the Azure API Management (APIM) service we will create.
 
 > Note, the name of your API Management service instance name has to be globally unique!
+
+```shell
+export APIM_SERVICE_NAME="dapr-apim-demo"
+```
+
+In addition to the above name, export also the Azure [Subscription ID](https://docs.bitnami.com/azure/faq/administration/find-subscription-id/) and [Resource Group](https://docs.bitnami.com/azure/faq/administration/find-deployment-resourcegroup-id/) where you would like to create these APIM service.
 
 ```shell
 export AZ_SUBSCRIPTION_ID="your-subscription-id"
@@ -231,8 +237,8 @@ kubectl logs -l app=echo-service -c service
 ## Cleanup 
 
 ```shell
-kubectl delete -f ./gateway.yaml
-kubectl delete -f ./service.yaml
+kubectl delete -f gateway.yaml
+kubectl delete -f service.yaml
 kubectl delete secret demo-apim-gateway-token
 az apim delete --name daprapimdemo --no-wait --yes
 ```
