@@ -1,6 +1,6 @@
-# apim-dapr
+# Azure API Management Dapr Integration Demo  
 
-> Note, this is still work in progress
+This demo walks through creation of Azure API Management (APIM) service and exposing Dapr service API on Kubernetes using self-hosted gateway.
 
 ## Prerequisite 
 
@@ -23,12 +23,11 @@ In addition to the above name, export also the Azure [Subscription ID](https://d
 ```shell
 export AZ_SUBSCRIPTION_ID="your-subscription-id"
 export AZ_RESOURCE_GROUP="your-resource-group"
-export APIM_SERVICE_NAME="dapr-apim-demo"
 ```
 
 ## Azure API Management Configuration 
 
-First, create and configure the Azure API Management service.
+In this section we will create all the Azure resources. First, create and configure the Azure API Management service.
 
 ### Service
 
