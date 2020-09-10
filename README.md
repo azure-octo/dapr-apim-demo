@@ -138,7 +138,7 @@ Moving now to your Kubernetes cluster...
 
 ### Dapr Service 
 
-To deploy your application as a Dapr service you just need to decorating your Kubernetes deployment template with few Dapr annotations. To learn more about Kubernetes sidecar configuration see [Dapr docs](https://github.com/dapr/docs/blob/master/concepts/configuration/README.md#kubernetes-sidecar-configuration): 
+To deploy your application as a Dapr service you just need to decorating your Kubernetes deployment template with few Dapr annotations.
 
 ```yaml
 annotations:
@@ -147,6 +147,8 @@ annotations:
      dapr.io/app-protocol: "http"
      dapr.io/app-port: "8080"
 ```
+
+> To learn more about Kubernetes sidecar configuration see [Dapr docs](https://github.com/dapr/docs/blob/master/concepts/configuration/README.md#kubernetes-sidecar-configuration).
 
 For this demo we will use a pre-build Docker image of the [http-echo-service](https://github.com/mchmarny/dapr-demos/tree/master/http-echo-service). The Kubernetes deployment file of that service is defined [here](./service.yaml). Deploy it, and check that it is ready:
 
@@ -164,7 +166,7 @@ echo-service-77d6f5b5bb-crc5q   2/2     Running   0          97s
 
 ### APIM Gateway 
 
-To connect the self-hosted gateway to APIM service we will need to create a Kubernetes secret with the APIM gateway key. First, get the key from APIM API:
+To connect the self-hosted gateway to APIM service, we will need to create first a Kubernetes secret with the APIM gateway key. First, get the key from APIM API:
 
 > Note, the maximum validity for access tokens is 30. Update the below `expiry` parameter to be withing 30 days from today
 
@@ -177,27 +179,29 @@ curl -X POST -d '{ "keyType": "primary", "expiry": "2020-10-10T00:00:00Z" }' \
 
 Copy the content of `value` from the response and create a secret:
 
-> Make sure the secret includes the `GatewayKey`, a space, and the value of your token (e.g. `GatewayKey a1b2c3`)
+> Make sure the secret includes the `GatewayKey` + a space ` ` + the value of your token (e.g. `GatewayKey a1b2c3...`)
 
 ```shell
-kubectl create secret generic demo-apim-gateway-token --type=Opaque --from-literal=value="GatewayKey YOUR-TOKEN-HERE"
+kubectl create secret generic demo-apim-gateway-token --type Opaque --from-literal value="GatewayKey YOUR-TOKEN-HERE"
 ```
 
-Create a config map containing the APIM service endpoint:
+Now, create a config map containing the APIM service endpoint that will be used to configure your self-hosted gateway:
 
 ```shell
 kubectl create configmap demo-apim-gateway-env --from-literal \
      "config.service.endpoint=https://dapr-apim-demo.management.azure-api.net/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}/providers/Microsoft.ApiManagement/service/${APIM_SERVICE_NAME}?api-version=2019-12-01"
 ```
 
-And finally, deploy the self-hosted gateway and check that it's ready:
+And finally, deploy the gateway and check that it's ready:
 
 ```shell
 kubectl apply -f gateway.yaml
 kubectl get pods -l app=demo-apim-gateway
 ```
 
-The self-hosted gateway is deployed with 2 replicas to ensure availability during upgrades. Make sure both instances have status `Running` and container is ready `2/2` (gateway container + Dapr side-car).
+> Note, the self-hosted gateway is deployed with 2 replicas to ensure availability during upgrades. 
+
+Make sure both instances have status `Running` and container is ready `2/2` (gateway container + Dapr side-car).
 
 ```shell
 NAME                                 READY   STATUS    RESTARTS   AGE
@@ -213,7 +217,7 @@ We are ready to test. Start by capturing the cluster load balancer ingress IP:
 export GATEWAY_IP=$(kubectl get svc demo-apim-gateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 ```
 
-And now, post the message to the APIM self-hosted gateway which will be forwarded to the backing Dapr service:
+And now, try posting a message to the APIM self-hosted gateway which will be forwarded to the backing Dapr service:
 
 ```shell
 curl -X POST -d '{ "message": "hello" }' \
@@ -221,17 +225,19 @@ curl -X POST -d '{ "message": "hello" }' \
      "http://${GATEWAY_IP}/dapr-echo"
 ```
 
-If everything is configured correctly, you should see the response from the backing Dapr service: 
+If everything is configured correctly, you should see the response from your backing Dapr service: 
 
 ```json 
 { "message": "hello" }
 ```
 
-You can also confirm but checking the `echo-service` logs
+In addition, you can also check the `echo-service` logs:
 
 ```shell
 kubectl logs -l app=echo-service -c service
 ```
+
+This demo illustrates how to setup the APIM service and deploy your self-hosted gateway. Using this gateway can mange access to any number of your Dapr services hosted on Kubernetes. There is a lot more that APIM can do (e.g. Discovery, Access Control, Throttling, Caching, Logging, Traces etc.). You can find out more about APIM [here](https://azure.microsoft.com/en-us/services/api-management/)
 
 ## Cleanup 
 
