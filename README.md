@@ -6,7 +6,7 @@ This repo demonstrates how to expose Dapr API and invoke a service on Kubernetes
 
 * [Azure account](https://azure.microsoft.com/en-us/free/)
 * [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest)
-* [Kubernetes cluster with Dapr](https://github.com/dapr/docs/tree/master/howto/deploy-k8s-prod#guidelines-for-production-ready-deployments-on-kubernetes)
+* [Kubernetes cluster with Dapr](https://github.com/dapr/docs/blob/v0.9.0/getting-started/environment-setup.md#installing-dapr-on-a-kubernetes-cluster)
 
 ## Setup 
 
