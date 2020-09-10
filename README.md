@@ -10,118 +10,144 @@
 
 ## Setup 
 
-Assumes your default Azure resource group and location are already defined. If not, run:
+To make this demo easier to reproduce, export the name desired name of Azure API Management (APIM) service as well as the Azure [Subscription ID](https://docs.bitnami.com/azure/faq/administration/find-subscription-id/) and [Resource Group](https://docs.bitnami.com/azure/faq/administration/find-deployment-resourcegroup-id/) under which you would like to create that APIM service.
+
+> Note, the name of your API Management service instance name has to be globally unique!
 
 ```shell
-az account set --subscription <id or name>
-az configure --defaults location=<preferred location> group=<preferred resource group>
+export AZ_SUBSCRIPTION_ID="your-subscription-id"
+export AZ_RESOURCE_GROUP="your-resource-group"
+export APIM_SERVICE_NAME="dapr-apim-demo"
 ```
 
 ## Azure API Management Configuration 
 
-> Note, the name of your API Management service instance name (`daprapimdemo`) has to be globally unique!
+First, create and configure the Azure API Management service.
 
 ### Service
 
 Create APIM service instance:
 
+> The `publisher-email` and `publisher-name` below are required to receive system notifications e-mails.
+
 ```shell
-az apim create --name daprapimdemo \
-               --sku-name Premium \
-               --enable-client-certificate \
-               --publisher-email mchmarny@microsoft.com \
-               --publisher-name "OCTO Azure"
+az apim create --name $APIM_SERVICE_NAME \
+               --subscription $AZ_SUBSCRIPTION_ID \
+               --resource-group $AZ_RESOURCE_GROUP \
+               --publisher-email "you@your-domain.com" \
+               --publisher-name "Your Name"
 ```
 
-> Note, depending on your configuration, this operation may take 10+ min
+> Note, depending on the SKU and resource group configuration, this operation may take 15+ min. While this running, consider quick read on [API Management Concepts](https://docs.microsoft.com/en-us/azure/api-management/api-management-key-concepts#-apis-and-operations)
 
-### Policy
+### API
 
-Update the [api.yaml](./api.yaml) with the `gatewayUrl`
+Each APIM [API](https://docs.microsoft.com/en-us/azure/api-management/api-management-key-concepts#-apis-and-operations) map to back-end service managed by Dapr. This demo will use a simple echo service hosted in Dapr which simply returns posted content. To define that mapping you will need to first update the [api.yaml](./api.yaml) file with the name of the APIM service created above:
 
 ```yaml
 servers:
-  - url: http://daprapimdemo.azure-api.net
-  - url: https://daprapimdemo.azure-api.net
+  - url: http://YOUR-APIM-SERVICE-NAME.azure-api.net
+  - url: https://YOUR-APIM-SERVICE-NAME.azure-api.net
 ```
 
-Make sure you save the [api.yaml](./api.yaml) when finished and now import it into the previously created APIM service instance:
+When finished, import that OpenApi definition fle into APIM service instance:
 
 ```shell
-az apim api import --path /echo \
-                   --service-name daprapimdemo \
-                   --display-name echo-service \
-                   --api-type http \
+az apim api import --path / \
+                   --api-id dapr-echo \
+                   --service-name $APIM_SERVICE_NAME \
+                   --display-name "Demo Dapr Service API" \
                    --protocols http https \
                    --subscription-required false \
                    --specification-path api.yaml \
                    --specification-format OpenApi
 ```
 
-> How much what's in the `api.yaml` is really required here? 
+### Policy
 
-Get API Token and the newly created API ID
+APIM [Policies](https://docs.microsoft.com/en-us/azure/api-management/api-management-key-concepts#--policies) are defined in XML and sequentially executed on each request and/or response. In this demo we will create a simple `inbound` policy mapping to to the Dapr service method. 
+
+```xml
+<policies>
+     <inbound>
+          <set-backend-service backend-id="dapr" dapr-app-id="echo-service" dapr-method="echo" />
+     </inbound>
+     <backend>
+          <base />
+     </backend>
+     <outbound>
+          <base />
+     </outbound>
+     <on-error>
+          <base />
+     </on-error>
+</policies>
+```
+
+To apply policy we will first need export an Azure management API token: 
 
 ```shell
 export AZ_API_TOKEN=$(az account get-access-token --resource=https://management.azure.com --query accessToken --output tsv)
-export AZ_API_ID=$(az apim api list --service-name daprapimdemo --query "[?contains(displayName, 'echo-service')].id" --output tsv)
 ```
 
-Now apply the Dapr backend policy: 
+And then apply the policy:
 
 ```shell
-curl -v -X PUT -d @./policy.json \
+curl -X PUT \
+     -d @./policy.json \
      -H "Content-Type: application/json" \
      -H "If-Match: *" \
      -H "Authorization: Bearer ${AZ_API_TOKEN}" \
-     "https://management.azure.com${AZ_API_ID}/operations/echo/policies/policy?api-version=2019-12-01"
+     "https://management.azure.com/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}/providers/Microsoft.ApiManagement/service/${APIM_SERVICE_NAME}/apis/dapr-echo/operations/echo/policies/policy?api-version=2019-12-01"
 ```
 
-> Note, this succeeds (status code 201) and the valid, created policy is returned by the API but when you go to Azure portal it displays an error that the policies could not be loaded, come again later. Is it just a readiness check issue? The policy is eventually created and visible in portal.
+If everything goes well, the API will returned the created policy.
 
 ### Gateway
 
-Create Gateway 
-
-```shell
-export AZ_API_GATEWAY=$(echo $AZ_API_ID | rev | cut -d'/' -f3- | rev)
-```
-
-> Yes, this is all kinds of voodoo to get make this reproducible without asking you to cut and paste parts of the ID.
+To create a self-hosted gateway which will be then deployed to the Kubernetes cluster, first, we need to create the `demo-apim-gateway` object in APIM:
 
 ```shell
 curl -v -X PUT -d '{"properties": {"description": "Dapr Gateway","locationData": {"name": "Virtual"}}}' \
      -H "Content-Type: application/json" \
      -H "If-Match: *" \
      -H "Authorization: Bearer ${AZ_API_TOKEN}" \
-     "https://management.azure.com${AZ_API_GATEWAY}/gateways/gw1?api-version=2019-12-01"
+     "https://management.azure.com/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}/providers/Microsoft.ApiManagement/service/${APIM_SERVICE_NAME}/gateways/demo-apim-gateway?api-version=2019-12-01"
 ```
 
-Map Gateway to API
-
-```shell
-export AZ_API_OP_ID=$(echo $AZ_API_ID | cut -d'/' -f11-)
-```
+And then map the gateway to the previously created API:
 
 ```shell
 curl -v -X PUT -d '{ "properties": { "provisioningState": "created" } }' \
      -H "Content-Type: application/json" \
      -H "If-Match: *" \
      -H "Authorization: Bearer ${AZ_API_TOKEN}" \
-     "https://management.azure.com${AZ_API_GATEWAY}/gateways/gw1/apis/${AZ_API_OP_ID}?api-version=2019-12-01"
+     "https://management.azure.com/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}/providers/Microsoft.ApiManagement/service/${APIM_SERVICE_NAME}/gateways/demo-apim-gateway/apis/dapr-echo?api-version=2019-12-01"
 ```
+
+If everything goes well, the API returns JSON of the created objects.
 
 ## Kubernetes Configuration 
 
-Now, on your Kubernetes cluster...
+Moving now to your Kubernetes cluster...
 
-### Dapr Service Deployment 
+### Dapr Service 
 
-Deploy a Dapr service and watch it until it's ready:
+To deploy your application as a Dapr service you just need to decorating your Kubernetes deployment template with few Dapr annotations. To learn more about Kubernetes sidecar configuration see [Dapr docs](https://github.com/dapr/docs/blob/master/concepts/configuration/README.md#kubernetes-sidecar-configuration): 
+
+```yaml
+annotations:
+     dapr.io/enabled: "true"
+     dapr.io/app-id: "echo-service"
+     dapr.io/app-protocol: "http"
+     dapr.io/app-port: "8080"
+```
+
+For this demo we will use a pre-build Docker image of the [http-echo-service](https://github.com/mchmarny/dapr-demos/tree/master/http-echo-service). The Kubernetes deployment file of that service is defined [here](./service.yaml). Deploy it, and check that it is ready:
 
 ```shell
-kubectl apply -f ./service.yaml
-watch kubectl get pods -l app=echo-service
+kubectl apply -f service.yaml
+kubectl get pods -l app=echo-service
 ```
 
 > Service is ready when its status is `Running` and the ready column is `2/2` (Dapr and our echo service both started)
@@ -131,109 +157,82 @@ NAME                            READY   STATUS    RESTARTS   AGE
 echo-service-77d6f5b5bb-crc5q   2/2     Running   0          97s
 ```
 
-> Note, you may have to restart the gateway if you have deployed/updated your service AFTER the gateway
+### APIM Gateway 
+
+To connect the self-hosted gateway to APIM service we will need to create a Kubernetes secret with the APIM gateway key. First, get the key from APIM API:
+
+> Note, the maximum validity for access tokens is 30. Update the below `expiry` parameter to be withing 30 days from today
 
 ```shell
-kubectl rollout restart deployment/daprdemo-gateway
-kubectl rollout status deployment/daprdemo-gateway
+curl -X POST -d '{ "keyType": "primary", "expiry": "2020-10-10T00:00:00Z" }' \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer ${AZ_API_TOKEN}" \
+     "https://management.azure.com/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}/providers/Microsoft.ApiManagement/service/${APIM_SERVICE_NAME}/gateways/demo-apim-gateway/generateToken?api-version=2019-12-01"
 ```
 
-### Deploy Self-hosted APIM Gateway 
+Copy the content of `value` from the response and create a secret:
 
-> Can't find any way to create a gateway programmatically (neither in Az CLI, or REST API)
-
-Create a secret 
+> Make sure the secret includes the `GatewayKey`, a space, and the value of your token (e.g. `GatewayKey a1b2c3`)
 
 ```shell
-kubectl create secret generic gw1-token --type=Opaque --from-literal=value="GatewayKey ..."
+kubectl create secret generic demo-apim-gateway-token --type=Opaque --from-literal=value="GatewayKey YOUR-TOKEN-HERE"
 ```
 
-Augment the deployment template metadata with Dapr annotations:
-
-> Note, this step may be not required (or at least not for all the annotations) when automated 
-
-```yaml
-annotations:
-    dapr.io/enabled: "true"
-    dapr.io/app-id: "gw1"
-    dapr.io/config: "tracing"
-    dapr.io/log-as-json: "true"
-    dapr.io/log-level: "debug"
-```
-
-Deploy gateway
+Create a config map containing the APIM service endpoint:
 
 ```shell
-kubectl apply -f ./gateway.yaml
-watch kubectl get pods -l app=gw1
+kubectl create configmap demo-apim-gateway-env --from-literal \
+     "config.service.endpoint=https://dapr-apim-demo.management.azure-api.net/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}/providers/Microsoft.ApiManagement/service/${APIM_SERVICE_NAME}?api-version=2019-12-01"
 ```
 
-Wait for both instances (required for rolling upgrades) are status `STATUS` and container is ready `1/1`.
+And finally, deploy the self-hosted gateway and check that it's ready:
 
 ```shell
-NAME                           READY   STATUS    RESTARTS   AGE
-gw1-7896ddc989-m4lmm   2/2     Running   0          26s
-gw1-7896ddc989-ts8cm   2/2     Running   0          26s
+kubectl apply -f gateway.yaml
+kubectl get pods -l app=demo-apim-gateway
+```
+
+The self-hosted gateway is deployed with 2 replicas to ensure availability during upgrades. Make sure both instances have status `Running` and container is ready `2/2` (gateway container + Dapr side-car).
+
+```shell
+NAME                                 READY   STATUS    RESTARTS   AGE
+demo-apim-gateway-6dfb968f5c-cb4t7   2/2     Running   0          26s
+demo-apim-gateway-6dfb968f5c-gxrrq   2/2     Running   0          26s
 ```
 
 ## Test
 
-```shell
-export GATEWAY_IP=$(kubectl get svc gw1 -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+We are ready to test. Start by capturing the cluster load balancer ingress IP:
 
-curl -v -X POST -d '{ "message": "hello" }' \
+```shell
+export GATEWAY_IP=$(kubectl get svc demo-apim-gateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+```
+
+And now, post the message to the APIM self-hosted gateway which will be forwarded to the backing Dapr service:
+
+```shell
+curl -X POST -d '{ "message": "hello" }' \
      -H "Content-Type: application/json" \
-     "http://${GATEWAY_IP}/echo"
-
-
-     curl http://${GATEWAY_IP}/internal-status-0123456789abcdef
+     "http://${GATEWAY_IP}/dapr-echo"
 ```
 
-## Debug 
+If everything is configured correctly, you should see the response from the backing Dapr service: 
 
+```json 
+{ "message": "hello" }
+```
 
-### Backing Service 
-
-Check if the backing service (``) is working. First forward the service port:
+You can also confirm but checking the `echo-service` logs
 
 ```shell
-kubectl port-forward pod/echo-service-944d8684b-nbzxz 3500:3500
+kubectl logs -l app=echo-service -c service
 ```
-
-```shell
-export GATEWAY_IP=$(kubectl get svc gw1 -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-```
-
-Call the service using the forwarded port 
-
-```shell
-curl -v -X POST -d '{"message": "hello"}' \
-     -H "Content-Type: application/json" \
-     "http://localhost:3500/v1.0/invoke/echo-service/method/echo"
-```
-
-If service is running correctly you will see status 200 (`HTTP/1.1 200 OK`) and the sent message returned `{"message": "hello"}`
-
-### Gateway 
-
-When you see `404` errors from invoking the gateway check the gateway logs 
-
-```shell
-kubectl logs -l app=gw1 -c gw1 -f
-```
-
-If you see entries about inability to `match incoming request to an operation` check your policy
-
-```shell
-[Info] 2020-09-9T01:48:03.746, time: 09/09/2020 13:48:03, apiId: 9ab8d6aa9fe64a02a860bdf91dd0ca55, apiRevision: 1, isCurrentApiRevision: 1, clientIp: 67.189.125.3, url: http://20.51.70.83/echo, method: POST, responseCode: 404, backendResponseCode: 0, requestSize: 0, responseSize: 130, clientProtocol: HTTP/1.1, totalTime: 208, backendTime: 0, clientTime: 1, cacheTime: 0, cacheType: 0, errorSource: configuration, errorReason: OperationNotFound, errorMessage: Unable to match incoming request to an operation., errorSection: backend, errorElapsed: 172, tags: 546, tokensTime: 0, invalidOpKey: 0
-```
-
 
 ## Cleanup 
 
 ```shell
 kubectl delete -f ./gateway.yaml
-kubectl apply -f ./service.yaml
-kubectl delete secret gw1-token
+kubectl delete -f ./service.yaml
+kubectl delete secret demo-apim-gateway-token
 az apim delete --name daprapimdemo --no-wait --yes
 ```

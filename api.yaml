@@ -3,12 +3,12 @@ info:
   title: echo-service
   version: '1.0'
 servers:
-  - url: http://daprapimdemo.azure-api.net
-  - url: https://daprapimdemo.azure-api.net
+  - url: http://dapr-apim-demo.azure-api.net
+  - url: https://dapr-apim-demo.azure-api.net
 paths:
-  /echo:
+  /dapr-echo:
     post:
-      summary: Invoke service
+      summary: Invoke Dapr service
       description: Invoke service using Dapr API
       operationId: echo
       requestBody:

@@ -1,21 +1,14 @@
 # NOTE: Before deploying to a production environment, please review the documentation -> https://aka.ms/self-hosted-gateway-production
 ---
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: gw1-env
-data:
-  config.service.endpoint: "https://daprapimdemo.management.azure-api.net/subscriptions/2865c7d1-29fa-485a-8862-717377bdbf1b/resourceGroups/mchmarny/providers/Microsoft.ApiManagement/service/daprapimdemo?api-version=2019-12-01"
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gw1
+  name: demo-apim-gateway
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: gw1
+      app: demo-apim-gateway
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -24,17 +17,17 @@ spec:
   template:
     metadata:
       labels:
-        app: gw1
+        app: demo-apim-gateway
       annotations:
         dapr.io/enabled: "true"
-        dapr.io/app-id: "gw1"
+        dapr.io/app-id: "demo-apim-gateway"
         dapr.io/config: "tracing"
         dapr.io/log-as-json: "true"
         dapr.io/log-level: "debug"
     spec:
       terminationGracePeriodSeconds: 60
       containers:
-      - name: gw1
+      - name: demo-apim-gateway
         image: mcr.microsoft.com/azure-api-management/gateway:beta
         ports:
         - name: http
@@ -54,16 +47,16 @@ spec:
         - name: config.service.auth
           valueFrom:
             secretKeyRef:
-              name: gw1-token
+              name: demo-apim-gateway-token
               key: value
         envFrom:
         - configMapRef:
-            name: gw1-env
+            name: demo-apim-gateway-env
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: gw1
+  name: demo-apim-gateway
 spec:
   type: LoadBalancer
   externalTrafficPolicy: Local
@@ -75,4 +68,4 @@ spec:
     port: 443
     targetPort: 8081
   selector:
-    app: gw1
+    app: demo-apim-gateway
