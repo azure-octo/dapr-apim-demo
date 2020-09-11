@@ -315,7 +315,7 @@ annotations:
 
 > To learn more about Kubernetes sidecar configuration see [Dapr docs](https://github.com/dapr/docs/blob/master/concepts/configuration/README.md#kubernetes-sidecar-configuration).
 
-For this demo we will use a pre-build Docker images of two applications: [echo service](https://github.com/mchmarny/dapr-demos/tree/master/http-echo-service) and [event subscriber service](https://github.com/mchmarny/dapr-demos/tree/master/http-event-subscriber). The Kubernetes deployments for both of these are located here:
+For this demo we will use a pre-build Docker images of two applications: [gRPC Echo Service](https://github.com/mchmarny/dapr-demos/tree/master/grpc-echo-service) and [HTTP Event Subscriber Service](https://github.com/mchmarny/dapr-demos/tree/master/http-event-subscriber). The Kubernetes deployments for both of these are located here:
 
 * [k8s/echo-service.yaml](k8s/echo-service.yaml)
 * [k8s/event-subscriber.yaml](k8s/event-subscriber.yaml)
@@ -411,7 +411,7 @@ export GATEWAY_IP=$(kubectl get svc demo-apim-gateway -o jsonpath='{.status.load
 
 ### Service Invocation 
 
-To invoke the service Dapr API exposed by APIM run:
+To invoke the backing gRPC service over Dapr API exposed by APIM run:
 
 ```shell
 curl -i -X POST -d '{ "message": "hello" }' \
