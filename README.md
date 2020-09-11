@@ -36,7 +36,7 @@ To make this demo easier to reproduce, start by exporting the name of the Azure 
 export APIM_SERVICE_NAME="dapr-apim-demo"
 ```
 
-In addition to the above name, export also the Azure [Subscription ID](https://docs.bitnami.com/azure/faq/administration/find-subscription-id/) and [Resource Group](https://docs.bitnami.com/azure/faq/administration/find-deployment-resourcegroup-id/) where you would like to create these APIM service.
+In addition to the above name, export also the Azure [Subscription ID](https://docs.bitnami.com/azure/faq/administration/find-subscription-id/) and [Resource Group](https://docs.bitnami.com/azure/faq/administration/find-deployment-resourcegroup-id/) where you would like to create this APIM service.
 
 ```shell
 export AZ_SUBSCRIPTION_ID="your-subscription-id"
@@ -45,13 +45,13 @@ export AZ_RESOURCE_GROUP="your-resource-group"
 
 ## Azure API Management 
 
-In this section we will create all the Azure resources. First, create and configure the Azure API Management service.
+In this section we will create all the Azure resources required for this demo. First, create and configure the Azure API Management service.
 
 ### Service Creation
 
 Create APIM service instance:
 
-> The `publisher-email` and `publisher-name` below are required to receive system notifications e-mails.
+> The `publisher-email` and `publisher-name` below are only required to receive system notifications e-mails.
 
 ```shell
 az apim create --name $APIM_SERVICE_NAME \
@@ -65,7 +65,7 @@ az apim create --name $APIM_SERVICE_NAME \
 
 ### API Configuration
 
-Each APIM [API](https://docs.microsoft.com/en-us/azure/api-management/api-management-key-concepts#-apis-and-operations) map to back-end service managed by Dapr. This demo will use a simple echo service hosted in Dapr which simply returns posted content. To define that mapping you will need to first update the [apim/api.yaml](./apim/api.yaml) file with the name of the APIM service created above:
+Each [API](https://docs.microsoft.com/en-us/azure/api-management/api-management-key-concepts#-apis-and-operations) defined in APIM will map to one Dapr API. To define these mappings you will use OpenAPI format defined in [apim/api.yaml](./apim/api.yaml). You will need to update it with the name of the APIM service created above:
 
 ```yaml
 servers:
@@ -73,7 +73,7 @@ servers:
   - url: https://YOUR-APIM-SERVICE-NAME.azure-api.net
 ```
 
-When finished, import that OpenApi definition fle into APIM service instance:
+When finished, import that OpenAPI definition fle into APIM service instance:
 
 ```shell
 az apim api import --path / \
