@@ -6,7 +6,7 @@ servers:
   - url: http://dapr-apim-demo.azure-api.net
   - url: https://dapr-apim-demo.azure-api.net
 paths:
-  /dapr-echo:
+  /echo:
     post:
       summary: Echo Service
       description: Invoke service using Dapr API
@@ -19,7 +19,7 @@ paths:
       responses:
         '200':
           description: ''
-  /dapr-topic:
+  /message:
     post:
       summary: Message Topic
       description: Post to topic using Dapr API
@@ -32,7 +32,7 @@ paths:
       responses:
         '200':
           description: ''
-  /dapr-trigger:
+  /trigger:
     post:
       summary: Trigger Binding
       description: Trigger output binding using Dapr API
@@ -45,17 +45,5 @@ paths:
       responses:
         '200':
           description: ''
-components:
-  securitySchemes:
-    apiKeyHeader:
-      type: apiKey
-      name: Ocp-Apim-Subscription-Key
-      in: header
-    apiKeyQuery:
-      type: apiKey
-      name: subscription-key
-      in: query
-security:
-  - apiKeyHeader: [ ]
-  - apiKeyQuery: [ ]
+
 

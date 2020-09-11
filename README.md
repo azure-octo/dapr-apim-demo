@@ -294,8 +294,8 @@ kubectl apply -f k8s/binding.yaml
 
 ```shell
 kubectl rollout restart deployment/event-subscriber
-kubectl rollout restart deployment/demo-apim-gateway
 kubectl rollout status deployment/event-subscriber
+kubectl rollout restart deployment/demo-apim-gateway
 kubectl rollout status deployment/demo-apim-gateway
 ```
 
@@ -419,7 +419,7 @@ To invoke the backing gRPC service over Dapr API exposed by APIM run:
 curl -i -X POST -d '{ "message": "hello" }' \
      -H "Content-Type: application/json" \
      -H "Authorization: demo1-232a021a-ac5c-4ce5-8f3e-c72559ea22d0" \
-     "http://${GATEWAY_IP}/dapr-echo"
+     "http://${GATEWAY_IP}/echo"
 ```
 
 If everything is configured correctly, you should see the response from your backing Dapr service: 
@@ -443,7 +443,7 @@ curl -i -X POST \
      -d '{ "message": "hello" }' \
      -H "Content-Type: application/json" \
      -H "Authorization: demo2-eb5141fe-15bf-4fec-9164-cfd3ae2a80e3" \
-     "http://${GATEWAY_IP}/dapr-topic"
+     "http://${GATEWAY_IP}/message"
 ```
 
 If everything is configured correctly, you will see `200` status code in the header, indicating the message was successfully delivered to the Dapr API.
@@ -468,7 +468,7 @@ To trigger Dapr binding API exposed by APIM run:
 curl -X POST -d '{ "send": "ping" }' \
      -H "Content-Type: application/json" \
      -H "Authorization: demo3-fg8754fe-75eb-7cef-9876-dcf3ae2a99f1" \
-     "http://${GATEWAY_IP}/dapr-trigger"
+     "http://${GATEWAY_IP}/trigger"
 ```
 
 If everything is configured correctly, you will see `200` status code in the header indicating the binding was successfully triggered on the Dapr API.
@@ -482,7 +482,7 @@ This demo illustrates how to setup the APIM service and deploy your self-hosted 
 APIM provides tracing which is helpful to debug policies. To take advantage of this feature you will first need a subscription key: 
 
 ```shell
-curl -i -H POST  -d '{}' -H "Authorization: Bearer ${AZ_API_TOKEN}" \
+curl -i -H POST -d '{}' -H "Authorization: Bearer ${AZ_API_TOKEN}" \
      "https://management.azure.com/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}/providers/Microsoft.ApiManagement/service/${APIM_SERVICE_NAME}/subscriptions/master/listSecrets?api-version=2019-12-01"
 ```
 
@@ -494,7 +494,7 @@ curl -v -X POST -d '{ "message": "hello" }' \
      -H "Authorization: demo2-eb5141fe-15bf-4fec-9164-cfd3ae2a80e3" \
      -H "Ocp-Apim-Subscription-Key: YOUR-SUBSCRIPTION-KEY-HERE" \
      -H "Ocp-Apim-Trace: true" \
-     "http://${GATEWAY_IP}/dapr-topic"
+     "http://${GATEWAY_IP}/message"
 ```
 
 The response of our invocation will now also include the `Ocp-Apim-Trace-Location` header parameter which will hold the URL to where you can view your trace. Paste that URL into browser to get the full trace: 
@@ -564,10 +564,16 @@ The details of the trace are long. For example you will be able to see the messa
 
 ```shell
 kubectl delete -f k8s/gateway.yaml
-kubectl delete -f k8s/service.yaml
+
+kubectl delete -f k8s/echo-service.yaml
+kubectl delete -f k8s/event-subscriber.yaml
+
 kubectl delete -f k8s/pubsub.yaml
+kubectl delete -f k8s/binding.yaml
+
 kubectl delete secret demo-apim-gateway-token
 kubectl delete configmap demo-apim-gateway-env
+
 az apim delete --name $APIM_SERVICE_NAME --no-wait --yes
 ```
 
