@@ -1,6 +1,12 @@
 # Dapr & Azure API Management Integration Demo
 
-This repo demonstrates how to expose Dapr API and invoke a service on Kubernetes using [Azure API Management](https://azure.microsoft.com/en-us/services/api-management/) (APIM) self-hosted gateway.
+Dapr integration with [Azure API Management](https://azure.microsoft.com/en-us/services/api-management/) (APIM) using self-hosted gateway on Kubernetes including: 
+
+* APIM service creation and API configuration 
+* Self-hosted gateway deployment
+* Dapr service and component deployment
+
+demonstrates
 
 ## Prerequisite 
 
@@ -26,11 +32,11 @@ export AZ_SUBSCRIPTION_ID="your-subscription-id"
 export AZ_RESOURCE_GROUP="your-resource-group"
 ```
 
-## Azure API Management Configuration 
+## Azure API Management 
 
 In this section we will create all the Azure resources. First, create and configure the Azure API Management service.
 
-### Service
+### Service Creation
 
 Create APIM service instance:
 
@@ -46,7 +52,7 @@ az apim create --name $APIM_SERVICE_NAME \
 
 > Note, depending on the SKU and resource group configuration, this operation may take 15+ min. While this running, consider quick read on [API Management Concepts](https://docs.microsoft.com/en-us/azure/api-management/api-management-key-concepts#-apis-and-operations)
 
-### API
+### API Configuration
 
 Each APIM [API](https://docs.microsoft.com/en-us/azure/api-management/api-management-key-concepts#-apis-and-operations) map to back-end service managed by Dapr. This demo will use a simple echo service hosted in Dapr which simply returns posted content. To define that mapping you will need to first update the [apim/api.yaml](./apim/api.yaml) file with the name of the APIM service created above:
 
@@ -69,7 +75,7 @@ az apim api import --path / \
                    --specification-format OpenApi
 ```
 
-### Policy
+### Policy Management
 
 APIM [Policies](https://docs.microsoft.com/en-us/azure/api-management/api-management-key-concepts#--policies) are defined in XML and sequentially executed on each request and/or response. 
 
@@ -208,7 +214,7 @@ curl -i -X PUT \
 
 If everything goes well, the management API will return the created policy.
 
-### Gateway
+### Gateway Configuration
 
 To create a self-hosted gateway which will be then deployed to the Kubernetes cluster, first, we need to create the `demo-apim-gateway` object in APIM:
 
@@ -232,7 +238,7 @@ curl -i -X PUT -d '{ "properties": { "provisioningState": "created" } }' \
 
 If everything goes well, the API returns JSON of the created objects.
 
-## Kubernetes Configuration 
+## Kubernetes 
 
 Moving now to your Kubernetes cluster...
 
@@ -260,6 +266,8 @@ kubectl rollout status statefulset.apps/redis-master
 kubectl rollout status statefulset.apps/redis-slave
 ```
 
+### Components 
+
 When done, deploy the Dapr components:
 
 ```shell
@@ -282,7 +290,7 @@ You can check if the components were registered correctly in Dapr by inspecting 
 kubectl logs -l app=demo-apim-gateway -c daprd --tail=200
 ```
 
-### Dapr 
+### Dapr Services 
 
 To deploy your application as a Dapr service you just need to decorating your Kubernetes deployment template with few Dapr annotations.
 
@@ -334,7 +342,7 @@ app is subscribed to the following topics: [messages] through pubsub=demo-events
 subscribing to topic=messages on pubsub=demo-events
 ```
 
-### APIM Gateway 
+### Self-hosted APIM Gateway 
 
 To connect the self-hosted gateway to APIM service, we will need to create first a Kubernetes secret with the APIM gateway key. First, get the key from APIM API:
 
@@ -385,7 +393,7 @@ To check on the gateway logs:
 kubectl logs -l app=demo-apim-gateway -c demo-apim-gateway
 ```
 
-## Test
+## Usage (API Test)
 
 We are ready to test. Start by capturing the cluster load balancer ingress IP:
 
@@ -458,22 +466,29 @@ If everything is configured correctly, you should see no response, just `200` st
 
 ## Summary 
 
-This demo illustrates how to setup the APIM service and deploy your self-hosted gateway. Using this gateway can mange access to any number of your Dapr services hosted on Kubernetes. There is a lot more that APIM can do (e.g. Discovery, Access Control, Throttling, Caching, Logging, Traces etc.). You can find out more about APIM [here](https://azure.microsoft.com/en-us/services/api-management/)
+This demo illustrates how to setup the APIM service and deploy your self-hosted gateway. Using this gateway can mange access to any number of your Dapr services hosted on Kubernetes. You can find out more about all the features of APIM (e.g. Discovery, Caching, Logging etc.) [here](https://azure.microsoft.com/en-us/services/api-management/).
 
 ### Debugging 
 
-APIM has a very helpful way of assisting during policy development and debugging. By appending `Ocp-Apim` headers with subscription key and trace users are able to see the entire execution graph step by step. 
+APIM has a build-in tracing which is helpful during policy debugging. To take advantage of this feature you will first need the subscription key: 
+
+```shell
+curl -i -H POST  -d '{}' -H "Authorization: Bearer ${AZ_API_TOKEN}" \
+     "https://management.azure.com/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}/providers/Microsoft.ApiManagement/service/${APIM_SERVICE_NAME}/subscriptions/master/listSecrets?api-version=2019-12-01"
+```
+
+The response will include both the primary and secondary keys. Copy one of them and paste it into the `Ocp-Apim-Subscription-Key` header parameter. That along with `Ocp-Apim-Trace: true` in your request header will tell APIM to provide trace for your invocation:
 
 ```shell
 curl -v -X POST -d '{ "message": "hello" }' \
      -H "Content-Type: application/json" \
      -H "Authorization: demo2-eb5141fe-15bf-4fec-9164-cfd3ae2a80e3" \
-     -H "Ocp-Apim-Subscription-Key: ${AZ_APIM_KEY}" \
+     -H "Ocp-Apim-Subscription-Key: YOUR-SUBSCRIPTION-KEY-HERE" \
      -H "Ocp-Apim-Trace: true" \
      "http://${GATEWAY_IP}/dapr-topic"
 ```
 
-These header values, when provided during request, will result in the response including an additional `Ocp-Apim-Trace-Location` parameter with the trace URL you can use in browser to understand the APIM execution graph. An abbreviated example: 
+The response of our invocation will now also include the `Ocp-Apim-Trace-Location` header parameter which holds the URL to your trace. Just paste that URL into browser to get the full trace: 
 
 ```json
 {
@@ -485,7 +500,7 @@ These header values, when provided during request, will result in the response i
 }
 ```
 
-This is where you can see for example that the message was forwarded to Dapr API and what was the response:
+The trace is fully detail but for example you will be able to see the message that was forwarded to Dapr API and what was its response:
 
 ```json 
 ...
@@ -544,6 +559,6 @@ kubectl delete -f k8s/service.yaml
 kubectl delete -f k8s/pubsub.yaml
 kubectl delete secret demo-apim-gateway-token
 kubectl delete configmap demo-apim-gateway-env
-az apim delete --name daprapimdemo --no-wait --yes
+az apim delete --name $APIM_SERVICE_NAME --no-wait --yes
 ```
 
