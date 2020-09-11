@@ -1,0 +1,6 @@
+{
+    "properties": {
+      "format": "xml",
+      "value": "<policies><inbound><base /><publish-to-dapr topic=\"@(&quot;demo-events/messages&quot;)\" template=\"liquid\">{{body}}</publish-to-dapr></inbound><backend /><outbound><base /></outbound><on-error><base /></on-error></policies>"
+    }
+}

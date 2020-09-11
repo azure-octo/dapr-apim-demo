@@ -1,6 +1,6 @@
 openapi: 3.0.1
 info:
-  title: echo-service
+  title: dapr
   version: '1.0'
 servers:
   - url: http://dapr-apim-demo.azure-api.net
@@ -11,6 +11,19 @@ paths:
       summary: Invoke Dapr service
       description: Invoke service using Dapr API
       operationId: echo
+      requestBody:
+        content:
+          application/json:
+            example:
+              message: hello
+      responses:
+        '200':
+          description: ''
+  /dapr-topic:
+    post:
+      summary: Post to Dapr pub/sub topic
+      description: Invoke service using Dapr API
+      operationId: events
       requestBody:
         content:
           application/json:

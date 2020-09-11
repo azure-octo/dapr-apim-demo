@@ -4,6 +4,7 @@ metadata:
   name: echo-service
   labels:
     app: echo-service
+    demo: dapr-apim
 spec:
   replicas: 1
   selector:
@@ -13,6 +14,7 @@ spec:
     metadata:
       labels:
         app: echo-service
+        demo: dapr-apim
       annotations:
         dapr.io/enabled: "true"
         dapr.io/app-id: "echo-service"
