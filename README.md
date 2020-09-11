@@ -140,8 +140,9 @@ To expose a Dapr topic we create policy that defines the `messages` topic in the
      <inbound>
         <base />
         <publish-to-dapr 
-          topic="@("demo-events/messages")" template="liquid" 
-          response-variable-name="pubsub-response">{{body}}</publish-to-dapr>
+          topic="@("demo-events/messages")" 
+          response-variable-name="pubsub-response"
+        >@(context.Request.Body.As<string>())</publish-to-dapr>
         <return-response response-variable-name="pubsub-response" />
     </inbound>
      ...
