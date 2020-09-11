@@ -138,13 +138,15 @@ To expose a Dapr topic we create policy that defines the `messages` topic in the
 ```xml
 <policies>
      <inbound>
-          <base />
-          <publish-to-dapr topic="@("demo-events/messages")" template="liquid">{{body}}</publish-to-dapr>
-     </inbound>
+        <base />
+        <publish-to-dapr 
+          topic="@("demo-events/messages")" template="liquid" 
+          response-variable-name="pubsub-response">{{body}}</publish-to-dapr>
+        <return-response response-variable-name="pubsub-response" />
+    </inbound>
      ...
 </policies>
 ```
-
 
 And once more apply that policy:
 
@@ -214,11 +216,13 @@ When done, deploy the Dapr component:
 kubectl apply -f k8s/pubsub.yaml
 ```
 
-If you are making changes to the component you will have to restart the `event-subscriber` deployment 
+If you are making changes to the component you will have to restart the `event-subscriber` and the `demo-apim-gateway` deployments
 
 ```shell
 kubectl rollout restart deployment/event-subscriber
+kubectl rollout restart deployment/demo-apim-gateway
 kubectl rollout status deployment/event-subscriber
+kubectl rollout status deployment/demo-apim-gateway
 ```
 
 
@@ -364,6 +368,8 @@ Try also posting a message to the Dapr pub/sub topic using the API exposed by AP
 curl -X POST -d '{ "message": "hello" }' \
      -H "Content-Type: application/json" \
      -H "Authorization: demo2-eb5141fe-15bf-4fec-9164-cfd3ae2a80e3" \
+     -H "Ocp-Apim-Subscription-Key: ${AZ_APIM_KEY}" \
+     -H "Ocp-Apim-Trace: true" \
      "http://${GATEWAY_IP}/dapr-topic"
 ```
 
@@ -379,10 +385,142 @@ In addition, you can also check the `event-subscriber` logs:
 kubectl logs -l app=event-subscriber -c service
 ```
 
+### Debugging 
 
+APIM has a very helpful way of assisting during policy development and debugging. By appending `Ocp-Apim` headers with subscription key and trace users are able to see the entire execution graph step by step. 
 
+```shell
+curl -v -X POST -d '{ "message": "hello" }' \
+     -H "Content-Type: application/json" \
+     -H "Authorization: demo2-eb5141fe-15bf-4fec-9164-cfd3ae2a80e3" \
+     -H "Ocp-Apim-Subscription-Key: ${AZ_APIM_KEY}" \
+     -H "Ocp-Apim-Trace: true" \
+     "http://${GATEWAY_IP}/dapr-topic"
+```
 
-This demo illustrates how to setup the APIM service and deploy your self-hosted gateway. Using this gateway can mange access to any number of your Dapr services hosted on Kubernetes. There is a lot more that APIM can do (e.g. Discovery, Access Control, Throttling, Caching, Logging, Traces etc.). You can find out more about APIM [here](https://azure.microsoft.com/en-us/services/api-management/)
+These header values, when provided during request, will result in the response including an additional `Ocp-Apim-Trace-Location` parameter with the trace URL you can use in browser to understand the APIM execution graph. An abbreviated example: 
+
+```json
+{
+    "traceId": "05131509-7442-4cce-89d4-35271921ac42",
+    "traceEntries": {
+        "inbound": [
+            {
+                "source": "api-inspector",
+                "timestamp": "2020-09-11T11:15:52.8238407Z",
+                "elapsed": "00:00:00.0216474",
+                "data": {
+                    "request": {
+                        "method": "POST",
+                        "url": "http://x.x.x.x/dapr-topic",
+                        "headers": [...]
+                    }
+                }
+            },
+            {
+                "source": "api-inspector",
+                "timestamp": "2020-09-11T11:15:52.8258107Z",
+                "elapsed": "00:00:00.0234365",
+                "data": {
+                    "configuration": {
+                        "api": {
+                            "from": "/",
+                            "to": {
+                                "scheme": "https",
+                                "host": "dapr-apim-demo.azure-api.net",
+                                "port": 443,
+                                "path": "/",
+                                "queryString": "",
+                                "query": {},
+                                "isDefaultPort": true
+                            },
+                            "version": null,
+                            "revision": "1"
+                        },
+                        "operation": {
+                            "method": "POST",
+                            "uriTemplate": "/dapr-topic"
+                        },
+                        "user": "-",
+                        "product": "-"
+                    }
+                }
+            },
+            ...
+            {
+                "source": "check-header",
+                "timestamp": "2020-09-11T11:15:52.8887185Z",
+                "elapsed": "00:00:00.0863446",
+                "data": {
+                    "message": "Header validated.",
+                    "header": {
+                        "name": "Authorization",
+                        "value": "xxx"
+                    }
+                }
+            },
+            ...
+            {
+                "source": "rate-limit-by-key",
+                "timestamp": "2020-09-11T11:15:52.9002437Z",
+                "elapsed": "00:00:00.0978694",
+                "data": {
+                    "message": "Expression was successfully evaluated.",
+                    "expression": "context.Request.IpAddress",
+                    "value": "x.x.x.x"
+                }
+            },
+            ...
+            {
+                "source": "request-forwarder",
+                "timestamp": "2020-09-11T11:15:52.9405903Z",
+                "elapsed": "00:00:00.1382166",
+                "data": {
+                    "message": "Request is being forwarded to the backend service. Timeout set to 300 seconds",
+                    "request": {
+                        "method": "POST",
+                        "url": "http://localhost:3500/v1.0/publish/demo-events/messages"
+                    }
+                }
+            },
+            {
+                "source": "publish-to-dapr",
+                "timestamp": "2020-09-11T11:15:53.1899121Z",
+                "elapsed": "00:00:00.3875400",
+                "data": {
+                    "response": {
+                        "status": {
+                            "code": 200,
+                            "reason": "OK"
+                        },
+                        "headers": [
+                            {
+                                "name": "Server",
+                                "value": "fasthttp"
+                            },
+                            {
+                                "name": "Date",
+                                "value": "Fri, 11 Sep 2020 11:15:52 GMT"
+                            },
+                            {
+                                "name": "Content-Length",
+                                "value": "0"
+                            },
+                            {
+                                "name": "Traceparent",
+                                "value": "00-5b1f0bdfc2191742a4635a906359a7aa-196f5df2e977b00a-01"
+                            }
+                        ]
+                    }
+                }
+            },
+            ...
+        ],
+        "outbound": [...]
+    }
+}
+```
+
 
 ## Cleanup 
 
@@ -394,3 +532,7 @@ kubectl delete secret demo-apim-gateway-token
 kubectl delete configmap demo-apim-gateway-env
 az apim delete --name daprapimdemo --no-wait --yes
 ```
+
+## Summary 
+
+This demo illustrates how to setup the APIM service and deploy your self-hosted gateway. Using this gateway can mange access to any number of your Dapr services hosted on Kubernetes. There is a lot more that APIM can do (e.g. Discovery, Access Control, Throttling, Caching, Logging, Traces etc.). You can find out more about APIM [here](https://azure.microsoft.com/en-us/services/api-management/)
