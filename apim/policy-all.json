@@ -1,6 +1,6 @@
 {
     "properties": {
       "format": "xml",
-      "value": "<policies><inbound><check-header name=\"Authorization\" failed-check-httpcode=\"401\" failed-check-error-message=\"Not authorized\" ignore-case=\"false\"><value>demo1-232a021a-ac5c-4ce5-8f3e-c72559ea22d0</value><value>demo2-eb5141fe-15bf-4fec-9164-cfd3ae2a80e3</value></check-header><set-header name=\"Authorization\" exists-action=\"delete\" /><rate-limit-by-key calls=\"120\" renewal-period=\"60\" increment-condition=\"@(context.Response.StatusCode == 200)\" counter-key=\"@(context.Request.IpAddress)\" /></inbound><backend><forward-request /></backend><outbound /><on-error /></policies>"
+      "value": "<policies><inbound><check-header name=\"Authorization\" failed-check-httpcode=\"401\" failed-check-error-message=\"Not authorized\" ignore-case=\"false\"><value>demo1-232a021a-ac5c-4ce5-8f3e-c72559ea22d0</value><value>demo2-eb5141fe-15bf-4fec-9164-cfd3ae2a80e3</value><value>demo3-fg8754fe-75eb-7cef-9876-dcf3ae2a99f1</value></check-header><set-header name=\"Authorization\" exists-action=\"delete\" /><rate-limit-by-key calls=\"120\" renewal-period=\"60\" increment-condition=\"@(context.Response.StatusCode == 200)\" counter-key=\"@(context.Request.IpAddress)\" /></inbound><backend><forward-request /></backend><outbound /><on-error /></policies>"
     }
 }

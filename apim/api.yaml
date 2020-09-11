@@ -8,7 +8,7 @@ servers:
 paths:
   /dapr-echo:
     post:
-      summary: Invoke Dapr service
+      summary: Echo Service
       description: Invoke service using Dapr API
       operationId: echo
       requestBody:
@@ -21,9 +21,22 @@ paths:
           description: ''
   /dapr-topic:
     post:
-      summary: Post to Dapr pub/sub topic
-      description: Invoke service using Dapr API
-      operationId: events
+      summary: Message Topic
+      description: Post to topic using Dapr API
+      operationId: message
+      requestBody:
+        content:
+          application/json:
+            example:
+              message: hello
+      responses:
+        '200':
+          description: ''
+  /dapr-trigger:
+    post:
+      summary: Trigger Binding
+      description: Trigger output binding using Dapr API
+      operationId: trigger
       requestBody:
         content:
           application/json:
