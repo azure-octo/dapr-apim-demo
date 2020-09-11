@@ -88,13 +88,13 @@ az apim api import --path / \
 
 ### Policy Management
 
-APIM [Policies](https://docs.microsoft.com/en-us/azure/api-management/api-management-key-concepts#--policies) are defined in XML and sequentially executed on each request and/or response. 
+APIM [Policies](https://docs.microsoft.com/en-us/azure/api-management/api-management-key-concepts#--policies) are defined in XML and are sequentially executed on each request and/or response. To configure 3 Dapr APIs, we will create 1 global and 3 API-specific policies.
 
 #### Global Policy
 
-To start with, we will create a global `inbound` policy for all APIs to authorize and rate-limit all requests on all operations. This simple global policy will define 2 authorization tokens and rate limit all requests to 120 calls per minute. 
+The global `inbound` policy will authorize tokens and rate-limit all requests on all operations to 120 calls per minute. 
 
-> Note, for simplicity, this demo is using opaque strings which will be compared to request header. APIM supports many different ways of authentication (e.g. JWT tokens). Also, the rate limit quota we defined here is being shared across all the self-hosted gateway replicas. So, in a default configuration where there are 2 replicas, this policy would actually be 60 calls per minute.
+> Note, while APIM supports many different ways of authentication, for simplicity, this demo will use opaque strings which will be compared to header value in each request. Also, the rate limit quota we defined here is being shared across all the replicas of self-hosted gateway. In default configuration, where there are 2 replicas, this policy would actually be half of the permitted calls per minute.
 
 ```xml
 <policies>
@@ -114,13 +114,15 @@ To start with, we will create a global `inbound` policy for all APIs to authoriz
 </policies>
 ```
 
-To apply this policy, we will first need export an Azure management API token: 
+To apply this policy, first export the Azure management API token: 
 
 ```shell
 export AZ_API_TOKEN=$(az account get-access-token --resource=https://management.azure.com --query accessToken --output tsv)
 ```
 
-And then apply the policy on API level API (all operations):
+> If for some reason you receive token expired later just re-run this command. 
+
+Apply that policy to all operations submit it to the Azure management API.
 
 ```shell
 curl -i -X PUT \
@@ -135,7 +137,7 @@ If everything goes well, the management API will return the created policy.
 
 #### Echo Service Policy 
 
-To define individual operation-level policies, we will start with policy to expose the `echo` method on `echo-service` service:
+To expose the `echo` operation method on `echo-service` service we will create a policy that "in-lines" the global policy (`<base />`) and set backend service for incoming request:
 
 ```xml
 <policies>
@@ -147,7 +149,7 @@ To define individual operation-level policies, we will start with policy to expo
 </policies>
 ```
 
-To apply this policy we need to execute the similar operation like we did before on the API level but this time on only for that one operation (e.g. `/apis/dapr/operations/echo/policies/policy`): 
+To apply this policy to the `echo` API, submit it to the Azure management API:
 
 ```shell
 curl -i -X PUT \
@@ -162,7 +164,7 @@ If everything goes well, the management API will return the created policy.
 
 #### Message Topic Policy 
 
-To expose a Dapr topic we create policy that defines the `messages` topic in the `demo-events` component:
+To expose the `messages` topic we will create a policy that "in-lines" the global policy (`<base />`) and set publishes the request payload to Dapr Pub/Sub API:
 
 ```xml
 <policies>
@@ -178,7 +180,7 @@ To expose a Dapr topic we create policy that defines the `messages` topic in the
 </policies>
 ```
 
-And once more apply that policy:
+To apply this policy to the `message` API, submit it to the Azure management API:
 
 
 ```shell
@@ -194,7 +196,7 @@ If everything goes well, the management API will return the created policy.
 
 #### Trigger Binding Policy 
 
-To expose a Dapr output binding we create policy that defines the `”create”` operation in the `demo-binding` component:
+To expose the `demo-binding` binding we will create a policy that "in-lines" the global policy (`<base />`) and set publishes the request payload to Dapr binding API:
 
 ```xml
 <policies>
@@ -211,8 +213,7 @@ To expose a Dapr output binding we create policy that defines the `”create”`
 </policies>
 ```
 
-And once more apply that policy:
-
+To apply this policy to the `trigger` API, submit it to the Azure management API:
 
 ```shell
 curl -i -X PUT \
@@ -237,7 +238,7 @@ curl -i -X PUT -d '{"properties": {"description": "Dapr Gateway","locationData":
      "https://management.azure.com/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}/providers/Microsoft.ApiManagement/service/${APIM_SERVICE_NAME}/gateways/demo-apim-gateway?api-version=2019-12-01"
 ```
 
-And then map the gateway to the previously created API:
+And then map that gateway to the previously created API:
 
 ```shell
 curl -i -X PUT -d '{ "properties": { "provisioningState": "created" } }' \
@@ -251,25 +252,24 @@ If everything goes well, the API returns JSON of the created objects.
 
 ## Kubernetes 
 
-Moving now to your Kubernetes cluster...
+Switching now to the Kubernetes cluster...
 
 ### Dependency 
 
-To showcase the ability to expose Dapr pub/sub and binding APIs in APIM we are going to need Dapr components configured on the cluster. 
+To showcase the ability to expose Dapr pub/sub and binding APIs in APIM, we are going to need Dapr components configured on the cluster. 
 
-> Note, Dapr has over 75 different components to choose from but to keep things simple for this demo we will use Redis as both pub/sub and binding backing service. 
+> Note, to keep things simple for this demo we will use Redis as both pub/sub and binding backing service but you can substitute it for any one of the 75+ different components Dapr offers today.
 
 Start with adding the Redis repo to your Helm charts:
 
 ```shell
-# Updating Help repos...
 helm repo add bitnami https://charts.bitnami.com/bitnami
 helm repo update
 ```
 
-Install Redis and wait for the deployment to complete:
+And install Redis and wait for the deployment to complete:
 
-> Note, for simplicity, we are deploying everything into the `default` namespace
+> Note, for simplicity, we are deploying everything into the `default` namespace.
 
 ```shell
 helm install redis bitnami/redis 
@@ -286,7 +286,7 @@ kubectl apply -f k8s/pubsub.yaml
 kubectl apply -f k8s/binding.yaml
 ```
 
-> Note, if you are making changes to the component you will have to restart the `event-subscriber` and the `demo-apim-gateway` deployments
+> Note, if you updated components after deploying the gateway you will need to restart the deployments.
 
 ```shell
 kubectl rollout restart deployment/event-subscriber
@@ -295,7 +295,7 @@ kubectl rollout status deployment/event-subscriber
 kubectl rollout status deployment/demo-apim-gateway
 ```
 
-You can check if the components were registered correctly in Dapr by inspecting the `daprd` logs in `demo-apim-gateway` pod for `demo-events` and `demo-binding`:
+To check if the components were registered correctly in Dapr, inspect the `daprd` logs in `demo-apim-gateway` pod for `demo-events` and `demo-binding`:
 
 ```shell
 kubectl logs -l app=demo-apim-gateway -c daprd --tail=200
@@ -303,7 +303,7 @@ kubectl logs -l app=demo-apim-gateway -c daprd --tail=200
 
 ### Dapr Services 
 
-To deploy your application as a Dapr service you just need to decorating your Kubernetes deployment template with few Dapr annotations.
+To deploy your application as a Dapr service you will need to decorate your Kubernetes deployment template with few Dapr annotations.
 
 ```yaml
 annotations:
@@ -313,12 +313,7 @@ annotations:
 
 > To learn more about Kubernetes sidecar configuration see [Dapr docs](https://github.com/dapr/docs/blob/master/concepts/configuration/README.md#kubernetes-sidecar-configuration).
 
-For this demo we will use a pre-build Docker images of two applications:
-
-* [http-echo-service](https://github.com/mchmarny/dapr-demos/tree/master/http-echo-service)
-* [http-event-subscriber](https://github.com/mchmarny/dapr-demos/tree/master/http-event-subscriber)
-
-The Kubernetes deployment files for both of these are:
+For this demo we will use a pre-build Docker images of two applications: [echo service](https://github.com/mchmarny/dapr-demos/tree/master/http-echo-service) and [event subscriber service](https://github.com/mchmarny/dapr-demos/tree/master/http-event-subscriber). The Kubernetes deployments for both of these are located here:
 
 * [k8s/echo-service.yaml](k8s/echo-service.yaml)
 * [k8s/event-subscriber.yaml](k8s/event-subscriber.yaml)
@@ -355,7 +350,7 @@ subscribing to topic=messages on pubsub=demo-events
 
 ### Self-hosted APIM Gateway 
 
-To connect the self-hosted gateway to APIM service, we will need to create first a Kubernetes secret with the APIM gateway key. First, get the key from APIM API:
+To connect the self-hosted gateway to APIM service, we will need to create a Kubernetes secret with the APIM gateway key. Start by getting the key from APIM API:
 
 > Note, the maximum validity for access tokens is 30. Update the below `expiry` parameter to be withing 30 days from today
 
@@ -368,11 +363,11 @@ curl -i -X POST -d '{ "keyType": "primary", "expiry": "2020-10-10T00:00:01Z" }' 
 
 Copy the content of `value` from the response and create a secret:
 
-> Make sure the secret includes the `GatewayKey` + a space ` ` + the value of your token (e.g. `GatewayKey a1b2c3...`)
-
 ```shell
 kubectl create secret generic demo-apim-gateway-token --type Opaque --from-literal value="GatewayKey paste-the-key-here"
 ```
+
+> Make sure the secret includes the `GatewayKey` and a space ` ` as well as the value of your token (e.g. `GatewayKey a1b2c3...`)
 
 Now, create a config map containing the APIM service endpoint that will be used to configure your self-hosted gateway:
 
@@ -406,7 +401,7 @@ kubectl logs -l app=demo-apim-gateway -c demo-apim-gateway
 
 ## Usage (API Test)
 
-We are ready to test. Start by capturing the cluster load balancer ingress IP:
+With APIM configured and self-hosted gateway deployed we are ready to test. Start by capturing the cluster load balancer ingress IP:
 
 ```shell
 export GATEWAY_IP=$(kubectl get svc demo-apim-gateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
@@ -414,7 +409,7 @@ export GATEWAY_IP=$(kubectl get svc demo-apim-gateway -o jsonpath='{.status.load
 
 ### Service Invocation 
 
-To invoke the API exposed by Dapr hosted service on APIM self-hosted gateway run:
+To invoke the service Dapr API exposed by APIM run:
 
 ```shell
 curl -i -X POST -d '{ "message": "hello" }' \
@@ -437,7 +432,7 @@ kubectl logs -l app=echo-service -c service
 
 ### Message Publishing 
 
-To post a message to the Dapr pub/sub topic exposed on APIM self-hosted gateway run:
+To post a message to the Dapr Pub/Sub API exposed on APIM run:
 
 ```shell
 curl -i -X POST \
@@ -447,7 +442,7 @@ curl -i -X POST \
      "http://${GATEWAY_IP}/dapr-topic"
 ```
 
-If everything is configured correctly, you should see no response, just the `200` status code in the header, indicating the message was successfully delivered to the Dapr API.
+If everything is configured correctly, you will see `200` status code in the header, indicating the message was successfully delivered to the Dapr API.
 
 You can also check the `event-subscriber` logs:
 
@@ -461,10 +456,9 @@ There should be an entry similar to this:
 event - PubsubName:demo-events, Topic:messages, ID:24f0e6f0-ab29-4cd6-8617-6c6c36ac1171, Data: map[message:hello]
 ```
 
-
 ### Binding Triggering
 
-To trigger Dapr output binding exposed on APIM self-hosted gateway run:
+To trigger Dapr binding API exposed by APIM run:
 
 ```shell
 curl -X POST -d '{ "send": "ping" }' \
@@ -473,7 +467,7 @@ curl -X POST -d '{ "send": "ping" }' \
      "http://${GATEWAY_IP}/dapr-trigger"
 ```
 
-If everything is configured correctly, you should see no response, just `200` status code indicating the binding was successfully triggered on the Dapr API.
+If everything is configured correctly, you will see `200` status code in the header indicating the binding was successfully triggered on the Dapr API.
 
 ## Summary 
 
@@ -481,14 +475,14 @@ This demo illustrates how to setup the APIM service and deploy your self-hosted 
 
 ### Debugging 
 
-APIM has a build-in tracing which is helpful during policy debugging. To take advantage of this feature you will first need the subscription key: 
+APIM provides tracing which is helpful to debug policies. To take advantage of this feature you will first need a subscription key: 
 
 ```shell
 curl -i -H POST  -d '{}' -H "Authorization: Bearer ${AZ_API_TOKEN}" \
      "https://management.azure.com/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}/providers/Microsoft.ApiManagement/service/${APIM_SERVICE_NAME}/subscriptions/master/listSecrets?api-version=2019-12-01"
 ```
 
-The response will include both the primary and secondary keys. Copy one of them and paste it into the `Ocp-Apim-Subscription-Key` header parameter. That along with `Ocp-Apim-Trace: true` in your request header will tell APIM to provide trace for your invocation:
+The response will include both the primary and secondary keys. Copy one of them and paste it into the `Ocp-Apim-Subscription-Key` header parameter. That along with `Ocp-Apim-Trace: true` in your request header will tell APIM to capture trace for your invocation:
 
 ```shell
 curl -v -X POST -d '{ "message": "hello" }' \
@@ -499,7 +493,7 @@ curl -v -X POST -d '{ "message": "hello" }' \
      "http://${GATEWAY_IP}/dapr-topic"
 ```
 
-The response of our invocation will now also include the `Ocp-Apim-Trace-Location` header parameter which holds the URL to your trace. Just paste that URL into browser to get the full trace: 
+The response of our invocation will now also include the `Ocp-Apim-Trace-Location` header parameter which will hold the URL to where you can view your trace. Paste that URL into browser to get the full trace: 
 
 ```json
 {
@@ -511,7 +505,7 @@ The response of our invocation will now also include the `Ocp-Apim-Trace-Locatio
 }
 ```
 
-The trace is fully detail but for example you will be able to see the message that was forwarded to Dapr API and what was its response:
+The details of the trace are long. For example you will be able to see the message that was forwarded to Dapr API and what was its response:
 
 ```json 
 ...
