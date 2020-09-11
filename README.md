@@ -78,6 +78,8 @@ When finished, import that OpenAPI definition fle into APIM service instance:
 ```shell
 az apim api import --path / \
                    --api-id dapr \
+                   --subscription $AZ_SUBSCRIPTION_ID \
+                   --resource-group $AZ_RESOURCE_GROUP \
                    --service-name $APIM_SERVICE_NAME \
                    --display-name "Demo Dapr Service API" \
                    --protocols http https \
