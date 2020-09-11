@@ -1,12 +1,23 @@
 # Dapr & Azure API Management Integration Demo
 
-Dapr integration with [Azure API Management](https://azure.microsoft.com/en-us/services/api-management/) (APIM) using self-hosted gateway on Kubernetes including: 
+Dapr integration with [Azure API Management](https://azure.microsoft.com/en-us/services/api-management/) (APIM) using self-hosted gateway on Kubernetes. 
 
-* APIM service creation and API configuration 
-* Self-hosted gateway deployment
-* Dapr service and component deployment
+In this demo we will walk through configuration steps for: 
 
-demonstrates
+* API Management service
+* Self-hosted gateway on Kubernetes
+* Dapr component and service deployment
+* Dapr API policies
+
+and demonstrate the use of Dapr APIs exposed by APIM for:
+
+* Invocation of Dapr registered service 
+* Topic invocation on Dapr Pub/Sub
+* Triggering of Dapr output binding
+
+In addition, we will show the use of tracing to debug your APIM policy configuration. 
+
+> While you can accomplish everything we show here in Azure portal, to make this demo easier to reliably reproduce, we will be using only the Azure CLI and APIs.
 
 ## Prerequisite 
 
