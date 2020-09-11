@@ -224,6 +224,8 @@ curl -i -X PUT \
      "https://management.azure.com/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}/providers/Microsoft.ApiManagement/service/${APIM_SERVICE_NAME}/apis/dapr/operations/trigger/policies/policy?api-version=2019-12-01"
 ```
 
+> Note, the support in APIM for bindings is still rolling out across Azure regions. You can safely skip this section and just demo service invocation and topic publishing if you receive an error that `invoke-dapr-binding` is not recognize.
+
 If everything goes well, the management API will return the created policy.
 
 ### Gateway Configuration
