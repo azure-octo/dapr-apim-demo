@@ -16,7 +16,7 @@ In addition, we will overview the use of APIM tracing to debug your configuratio
 
 ## Terminology
 
-You will see a few different APIs being used throughout this demo. At one point we are even going to use one API to manage another (API inception?). Here is short summary to your keep them all straight. Hope this helps: 
+You will see a few different APIs being used throughout this demo. At one point we are even going to use one API to manage another (API inception?). Here is short summary to help you keep all these APIs straight. Hope it helps: 
 
 * [Azure API](https://docs.microsoft.com/en-us/rest/api/apimanagement/) - this is the API provided by Azure to manage its service (yes, including the API Management Service)
 * [API in APIM](https://docs.microsoft.com/en-us/azure/api-management/edit-api) - is the API which we will define in APIM service. Its operations will be used by the users
