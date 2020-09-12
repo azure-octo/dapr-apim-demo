@@ -83,30 +83,29 @@ az apim api import --path / \
                    --specification-format OpenApi
 ```
 
+### Azure API Token
+
+Export the Azure management API token to use through this demo.
+
+> Later if you receive an error that your token expired, just re-run this command
+
+```shell
+export AZ_API_TOKEN=$(az account get-access-token --resource=https://management.azure.com --query accessToken --output tsv)
+```
+
 ### Policy Management
 
 APIM [Policies](https://docs.microsoft.com/en-us/azure/api-management/api-management-key-concepts#--policies) are sequentially executed on each request. We will start by defining "global" policy to authorize and throttle all operation invocations on our API, then add individual policies for each operation to add specific options.
 
 #### Global Policy
 
-APIM policies are defined inside of inbound, outbound, and backend elements. In our case to apply policy that will authorize tokens and rate-limit all requests on all operations (before they are forwarded to Dapr API), we will place the global policy within the `inbound` section. 
+APIM policies are defined inside of inbound, outbound, and backend elements. In our case to apply policy that will rate-limit all requests on all operations (before they are forwarded to Dapr API), we will place the global policy within the `inbound` section. 
 
-> Note, while APIM supports many different ways of authentication, for simplicity, this demo will use opaque strings which will be compared to header value in each request. Also, the rate limit quota we defined here is being shared across all the replicas of self-hosted gateway. In default configuration, where there are 2 replicas, this policy would actually be half of the permitted calls per minute.
+> Note, the rate limit quota we defined here is being shared across all the replicas of self-hosted gateway. In default configuration, where there are 2 replicas, this policy would actually be half of the permitted calls per minute.
 
 ```xml
 <policies>
      <inbound>
-          <check-header 
-               name="Authorization" 
-               failed-check-httpcode="401" 
-               failed-check-error-message="Not authorized" 
-               ignore-case="false">
-               <value>demo1-232a021a-ac5c-4ce5-8f3e-c72559ea22d0</value>
-               <value>demo2-eb5141fe-15bf-4fec-9164-cfd3ae2a80e3</value>
-          </check-header>
-          <set-header 
-               name="Authorization" 
-               exists-action="delete" />
           <rate-limit-by-key  
                calls="120"
                renewal-period="60"
@@ -115,15 +114,7 @@ APIM policies are defined inside of inbound, outbound, and backend elements. In 
      </inbound>
      ...
 </policies>
-```
-
-To apply this [policy](apim/policy-all.json), first export the Azure management API token: 
-
-```shell
-export AZ_API_TOKEN=$(az account get-access-token --resource=https://management.azure.com --query accessToken --output tsv)
-```
-
-> If for some reason you receive token expired later just re-run this command. 
+``` 
 
 Apply that [policy](apim/policy-all.json) to all operations submit it to the Azure management API.
 
@@ -133,7 +124,7 @@ curl -i -X PUT \
      -H "Content-Type: application/json" \
      -H "If-Match: *" \
      -H "Authorization: Bearer ${AZ_API_TOKEN}" \
-     "https://management.azure.com/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}/providers/Microsoft.ApiManagement/service/${APIM_SERVICE_NAME}/policies/policy?api-version=2019-12-01"
+     "https://management.azure.com/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}/providers/Microsoft.ApiManagement/service/${APIM_SERVICE_NAME}/apis/dapr/policies/policy?api-version=2019-12-01"
 ```
 
 If everything goes well, the management API will return the created policy.
@@ -251,7 +242,7 @@ To accommodate that format, out policy will also use templating engine called [l
                response-variable-name="binding-response">
                <metadata>
                     <item key="source">APIM</item>
-                    <item key="client-id">{{context.Request.Headers.Client-Id}}</item>
+                    <item key="client-id">{{context.Request.Headers.client-id}}</item>
                </metadata>
                <data>
                     {{context.Request.Body}}
@@ -460,14 +451,30 @@ With APIM configured and self-hosted gateway deployed we are ready to test. Star
 export GATEWAY_IP=$(kubectl get svc demo-apim-gateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 ```
 
+### API Subscription Key 
+
+All of the APIs we defined in this demo are protected with subscription key. To invoke them, we will first need a subscription key: 
+
+```shell
+curl -i -H POST -d '{}' -H "Authorization: Bearer ${AZ_API_TOKEN}" \
+     "https://management.azure.com/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}/providers/Microsoft.ApiManagement/service/${APIM_SERVICE_NAME}/subscriptions/master/listSecrets?api-version=2019-12-01"
+```
+
+The response will include both the primary and secondary keys. Copy one of them and export so we can use it for the rest of the demo:
+
+```shell
+export AZ_API_SUB_KEY="your-api-subscription-key"
+```
+
+
 ### Service Invocation 
 
 To invoke the backing gRPC service over Dapr API exposed by APIM run:
 
 ```shell
 curl -i -X POST -d '{ "message": "hello" }' \
-     -H "Content-Type: application/json" \
-     -H "Authorization: demo1-232a021a-ac5c-4ce5-8f3e-c72559ea22d0" \
+     -H "content-type: application/json" \
+     -H "dapr-api-key: ${AZ_API_SUB_KEY}" \
      "http://${GATEWAY_IP}/echo"
 ```
 
@@ -490,8 +497,8 @@ To post a message to the Dapr Pub/Sub API exposed on APIM run:
 ```shell
 curl -i -X POST \
      -d '{ "content": "hello" }' \
-     -H "Content-Type: application/json" \
-     -H "Authorization: demo2-eb5141fe-15bf-4fec-9164-cfd3ae2a80e3" \
+     -H "content-type: application/json" \
+     -H "dapr-api-key: ${AZ_API_SUB_KEY}" \
      "http://${GATEWAY_IP}/message"
 ```
 
@@ -515,9 +522,9 @@ To trigger Dapr binding API exposed by APIM run:
 
 ```shell
 curl -X POST -d '{ "query": "serverless", "lang": "en", "result": "recent" }' \
-     -H "Content-Type: application/json" \
-     -H "Authorization: demo3-fg8754fe-75eb-7cef-9876-dcf3ae2a99f1" \
-     -H "Client-Id: id-123456789" \
+     -H "content-type: application/json" \
+     -H "dapr-api-key: ${AZ_API_SUB_KEY}" \
+     -H "client-id: id-123456789" \
      "http://${GATEWAY_IP}/query"
 ```
 
@@ -529,20 +536,13 @@ This demo illustrates how to setup the APIM service and deploy your self-hosted 
 
 ### Debugging 
 
-APIM provides tracing which is helpful to debug policies. To take advantage of this feature you will first need a subscription key: 
-
-```shell
-curl -i -H POST -d '{}' -H "Authorization: Bearer ${AZ_API_TOKEN}" \
-     "https://management.azure.com/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}/providers/Microsoft.ApiManagement/service/${APIM_SERVICE_NAME}/subscriptions/master/listSecrets?api-version=2019-12-01"
-```
-
-The response will include both the primary and secondary keys. Copy one of them and paste it into the `Ocp-Apim-Subscription-Key` header parameter. That along with `Ocp-Apim-Trace: true` in your request header will tell APIM to capture trace for your invocation:
+APIM provides tracing which is helpful to debug policies. To take advantage of this feature you will need to include `Ocp-Apim-Trace` attribute indicating that you want to trace this request, and `Ocp-Apim-Subscription-Key` attribute for which we can use the `$AZ_API_SUB_KEY` we've exported before. 
 
 ```shell
 curl -v -X POST -d '{ "message": "hello" }' \
      -H "Content-Type: application/json" \
-     -H "Authorization: demo2-eb5141fe-15bf-4fec-9164-cfd3ae2a80e3" \
-     -H "Ocp-Apim-Subscription-Key: YOUR-SUBSCRIPTION-KEY-HERE" \
+     -H "dapr-api-key: ${AZ_API_SUB_KEY}" \
+     -H "Ocp-Apim-Subscription-Key: ${AZ_API_SUB_KEY}" \
      -H "Ocp-Apim-Trace: true" \
      "http://${GATEWAY_IP}/message"
 ```
