@@ -14,6 +14,14 @@ In addition, we will overview the use of APIM tracing to debug your configuratio
 
 > While you can accomplish everything we show here in Azure portal, to make this demo easier to reliably reproduce, we will be using only the Azure CLI and APIs.
 
+## Terminology
+
+You will see a few different APIs being used throughout this demo. At one point we are even going to use one API to manage another (API inception?). Here is short summary to your keep them all straight. Hope this helps: 
+
+* [Azure API](https://docs.microsoft.com/en-us/rest/api/apimanagement/) - this is the API provided by Azure to manage its service (yes, including the API Management Service)
+* [API in APIM](https://docs.microsoft.com/en-us/azure/api-management/edit-api) - is the API which we will define in APIM service. Its operations will be used by the users
+* [Dapr API](https://github.com/dapr/docs/tree/master/reference/api#dapr-api-reference) - are the RESTful HTTP APIs defined by Dapr which developers interact with building applications
+
 ## Prerequisite 
 
 * [Azure account](https://azure.microsoft.com/en-us/free/)
