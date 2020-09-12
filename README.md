@@ -108,7 +108,9 @@ APIM policies are defined inside of inbound, outbound, and backend elements. In 
                <value>demo1-232a021a-ac5c-4ce5-8f3e-c72559ea22d0</value>
                <value>demo2-eb5141fe-15bf-4fec-9164-cfd3ae2a80e3</value>
           </check-header>
-          <set-header name="Authorization" exists-action="delete" />
+          <set-header 
+               name="Authorization" 
+               exists-action="delete" />
           <rate-limit-by-key  
                calls="120"
                renewal-period="60"
@@ -191,11 +193,11 @@ To expose the `messages` topic configured in the `demo-events` component we will
      <inbound>
         <base />
         <publish-to-dapr 
-          topic="@("demo-events/messages")" 
-          response-variable-name="pubsub-response"
+               topic="@("demo-events/messages")" 
+               response-variable-name="pubsub-response"
         >@(context.Request.Body.As<string>())</publish-to-dapr>
         <return-response 
-          response-variable-name="pubsub-response" />
+               response-variable-name="pubsub-response" />
     </inbound>
      ...
 </policies>
