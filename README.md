@@ -2,20 +2,19 @@
 
 Dapr integration with [Azure API Management](https://azure.microsoft.com/en-us/services/api-management/) (APIM) using self-hosted gateway on Kubernetes. 
 
-In this demo we will walk through configuration steps for: 
+In this demo we will walk through APIM configuration: 
 
 * API Management service
 * Self-hosted gateway on Kubernetes
-* Dapr component and service deployment
 * Dapr API policies
 
-and demonstrate the use of Dapr APIs exposed by APIM for:
+To illustrate the Dapr integration, we are going to walk through three different Dapr use-cases:
 
-* Invocation of Dapr registered service 
-* Topic invocation on Dapr Pub/Sub
-* Triggering of Dapr output binding
+* Invocation of a specific Dapr service method
+* Publishing content to a specific Pub/Sub topic 
+* Request transformation on binding invocation 
 
-In addition, we will show the use of tracing to debug your APIM policy configuration. 
+In addition, we will also show the use of tracing to debug your APIM policy configuration. 
 
 > While you can accomplish everything we show here in Azure portal, to make this demo easier to reliably reproduce, we will be using only the Azure CLI and APIs.
 
@@ -90,11 +89,11 @@ az apim api import --path / \
 
 ### Policy Management
 
-APIM [Policies](https://docs.microsoft.com/en-us/azure/api-management/api-management-key-concepts#--policies) are defined in XML and are sequentially executed on each request and/or response. To configure 3 Dapr APIs, we will create 1 global and 3 API-specific policies.
+APIM [Policies](https://docs.microsoft.com/en-us/azure/api-management/api-management-key-concepts#--policies) are defined in XML and are sequentially executed on each request and/or response. We will start by defining policy to authorize and throttle all operation invocations, and then add individual policies for each operation to add specific options:
 
 #### Global Policy
 
-The global `inbound` policy will authorize tokens and rate-limit all requests on all operations to 120 calls per minute. 
+APIM policies are defined inside of inbound, outbound, and backend elements. In our case to apply policy to all incoming requests (before they are forwarded Dapr API), we will place the global `inbound` policy within the inbound section to authorize tokens and rate-limit all requests on all operations. 
 
 > Note, while APIM supports many different ways of authentication, for simplicity, this demo will use opaque strings which will be compared to header value in each request. Also, the rate limit quota we defined here is being shared across all the replicas of self-hosted gateway. In default configuration, where there are 2 replicas, this policy would actually be half of the permitted calls per minute.
 
@@ -139,7 +138,13 @@ If everything goes well, the management API will return the created policy.
 
 #### Echo Service Policy 
 
-To expose the `echo` operation method on `echo-service` service we will create a policy that "in-lines" the global policy (`<base />`) and set backend service for incoming request:
+The Dapr service invocation follows the REST convention:
+
+```shell
+POST/GET/PUT/DELETE /v1.0/invoke/<appId>/method/<method-name>
+```
+
+To expose the `echo` method on Dapr service with ID of `echo-service` we will create a policy that inherits the global policy (`<base />`) first, to ensure only authorize service invocation are passed to the backend Dapr API. Then to “map” the invocation we then set `dapr` as the “backend-id” and define the Dapr service and method attributes to specific service ID and method name.
 
 ```xml
 <policies>
@@ -151,7 +156,7 @@ To expose the `echo` operation method on `echo-service` service we will create a
 </policies>
 ```
 
-To apply this policy to the `echo` API, submit it to the Azure management API:
+To apply this policy to the `echo` operation on our API, submit it to the Azure management API:
 
 ```shell
 curl -i -X PUT \
@@ -166,7 +171,13 @@ If everything goes well, the management API will return the created policy.
 
 #### Message Topic Policy 
 
-To expose the `messages` topic we will create a policy that "in-lines" the global policy (`<base />`) and set publishes the request payload to Dapr Pub/Sub API:
+In addition to Dapr service invocation, APIM can also be used to publish to Dapr Pub/Sub API:
+
+```shell
+POST /v1.0/publish/<pubsubname>/<topic>
+```
+
+To expose the `messages` topic configured in the `demo-events` component we will start with inheriting the global policy like before, and then setting the publish policy to format the request that will be passed to the Dapr Pub/Sub API:
 
 ```xml
 <policies>
@@ -182,12 +193,12 @@ To expose the `messages` topic we will create a policy that "in-lines" the globa
 </policies>
 ```
 
-To apply this policy to the `message` API, submit it to the Azure management API:
+To apply this policy to the `message` operation on our API, submit it to the Azure management API:
 
 
 ```shell
 curl -i -X PUT \
-     -d @apim/policy-pubsub.json \
+     -d @apim/policy-message.json \
      -H "Content-Type: application/json" \
      -H "If-Match: *" \
      -H "Authorization: Bearer ${AZ_API_TOKEN}" \
@@ -198,9 +209,13 @@ If everything goes well, the management API will return the created policy.
 
 #### Trigger Binding Policy 
 
-In our final case, we are going to overview exposing the Dapr binding API using policy that, in contrast to the previous ones, doesn't simply forwards the originally data but rather creates brand new request based on the client request content. 
+In our final case, we are going to overview exposing the Dapr binding API.
 
-The payload expected by Dapr binding API looks like this: 
+```shell
+POST http://localhost:<appPort>/<name>
+```
+
+In contrast to the previous policies, rather than just forwarding the original request content, we are going to create a brand new request. This capability comes handy when your API needs to stay the same while the API exposed by the backing service evolves. Consider the payload expected by Dapr binding API: 
 
 ```json
 {
@@ -212,9 +227,7 @@ The payload expected by Dapr binding API looks like this:
 }
 ```
 
-To accommodate that format, out policy will compose a new request and use that to invoke the backing Dapr binding API. This capability comes handy when your API needs to stay the same while the API exposed by the backing service evolves. 
-
-Like before, we start by inheriting from the global policy (`<base />`) and setting the binding and its operation names. We will also use templating engine called `liquid` for simpler content selection. For the metadata, this policy creates a static `source` element, and a dynamic `client-id` element which is based on the value of the original client request header attribute. For data, we simply use the complete content of the client request.
+To accommodate that format, out policy will use templating engine called `liquid` which provides simpler content selection. For the metadata element that Dapr expects, this policy will create a `source` element with static `APIM` value, and for the `client-id` element the policy will select the original client request header attribute `Client-Id`. For data, we simply will use the original content of the client request.
 
 ```xml
 <policies>
@@ -226,7 +239,7 @@ Like before, we start by inheriting from the global policy (`<base />`) and sett
                                response-variable-name="binding-response">
                <metadata>
                     <item key="source">APIM</item>
-                    <item key="client-id">{{context.Request.Headers.ClientId}}</item>
+                    <item key="client-id">{{context.Request.Headers.Client-Id}}</item>
                </metadata>
                <data>
                     {{context.Request.Body}}
@@ -238,15 +251,15 @@ Like before, we start by inheriting from the global policy (`<base />`) and sett
 </policies>
 ```
 
-To apply this policy to the `trigger` API, submit it to the Azure management API:
+To apply this policy to the `query` operation on our API, submit it to the Azure management API:
 
 ```shell
 curl -i -X PUT \
-     -d @apim/policy-binding.json \
+     -d @apim/policy-query.json \
      -H "Content-Type: application/json" \
      -H "If-Match: *" \
      -H "Authorization: Bearer ${AZ_API_TOKEN}" \
-     "https://management.azure.com/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}/providers/Microsoft.ApiManagement/service/${APIM_SERVICE_NAME}/apis/dapr/operations/trigger/policies/policy?api-version=2019-12-01"
+     "https://management.azure.com/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}/providers/Microsoft.ApiManagement/service/${APIM_SERVICE_NAME}/apis/dapr/operations/query/policies/policy?api-version=2019-12-01"
 ```
 
 > Note, the support in APIM for bindings is still rolling out across Azure regions. You can safely skip this section and just demo service invocation and topic publishing if you receive an error that `invoke-dapr-binding` is not recognize.
@@ -463,7 +476,7 @@ To post a message to the Dapr Pub/Sub API exposed on APIM run:
 
 ```shell
 curl -i -X POST \
-     -d '{ "message": "hello" }' \
+     -d '{ "content": "hello" }' \
      -H "Content-Type: application/json" \
      -H "Authorization: demo2-eb5141fe-15bf-4fec-9164-cfd3ae2a80e3" \
      "http://${GATEWAY_IP}/message"
@@ -491,8 +504,8 @@ To trigger Dapr binding API exposed by APIM run:
 curl -X POST -d '{ "query": "serverless", "lang": "en", "result": "recent" }' \
      -H "Content-Type: application/json" \
      -H "Authorization: demo3-fg8754fe-75eb-7cef-9876-dcf3ae2a99f1" \
-     -H "ClientId: id-123456789" \
-     "http://${GATEWAY_IP}/trigger"
+     -H "Client-Id: id-123456789" \
+     "http://${GATEWAY_IP}/query"
 ```
 
 If everything is configured correctly, you will see `200` status code in the header indicating the binding was successfully triggered on the Dapr API.

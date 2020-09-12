@@ -28,22 +28,22 @@ paths:
         content:
           application/json:
             example:
-              message: hello
+              content: hello
       responses:
         '200':
           description: ''
-  /trigger:
+  /query:
     post:
-      summary: Trigger Binding
-      description: Trigger output binding using Dapr API
-      operationId: trigger
+      summary: Query Binding
+      description: Query output binding using Dapr API
+      operationId: query
       requestBody:
         content:
           application/json:
             example:
-              message: hello
+              query: serverless
+              lang: en
+              result: recent
       responses:
         '200':
           description: ''
-
-
