@@ -78,24 +78,26 @@ az apim api import --path / \
                    --service-name $APIM_SERVICE_NAME \
                    --display-name "Demo Dapr Service API" \
                    --protocols http https \
-                   --subscription-required false \
+                   --subscription-required true \
                    --specification-path apim/api.yaml \
                    --specification-format OpenApi
 ```
+
+> Notice the `subscription-required` parameter is set to `true` which means that all invocations against the `dapr` API will need a subscription key. We cover how to obtain the subscription key later. 
 
 ### Azure API Token
 
 Export the Azure management API token to use through this demo.
 
-> Later if you receive an error that your token expired, just re-run this command
-
 ```shell
 export AZ_API_TOKEN=$(az account get-access-token --resource=https://management.azure.com --query accessToken --output tsv)
 ```
 
+> If you receive an error later that your token expired, just re-run this command
+
 ### Policy Management
 
-APIM [Policies](https://docs.microsoft.com/en-us/azure/api-management/api-management-key-concepts#--policies) are sequentially executed on each request. We will start by defining "global" policy to authorize and throttle all operation invocations on our API, then add individual policies for each operation to add specific options.
+APIM [Policies](https://docs.microsoft.com/en-us/azure/api-management/api-management-key-concepts#--policies) are sequentially executed on each request. We will start by defining "global" policy to throttle all operation invocations on our API, then add individual policies for each operation to add specific options.
 
 #### Global Policy
 
@@ -394,9 +396,9 @@ subscribing to topic=messages on pubsub=demo-events
 
 ### Self-hosted APIM Gateway 
 
-To connect the self-hosted gateway to APIM service, we will need to create a Kubernetes secret with the APIM gateway key. Start by getting the key from APIM API:
+To connect the self-hosted gateway to APIM service, we will need to create a Kubernetes secret with the APIM gateway key. Start by getting the key which your gateway will use to connect to from APIM:
 
-> Note, the maximum validity for access tokens is 30. Update the below `expiry` parameter to be withing 30 days from today
+> Note, the maximum validity for access tokens is 30 days. Update the below `expiry` parameter to be withing 30 days from today
 
 ```shell
 curl -i -X POST -d '{ "keyType": "primary", "expiry": "2020-10-10T00:00:01Z" }' \
