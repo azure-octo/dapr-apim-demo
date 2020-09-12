@@ -100,16 +100,20 @@ APIM policies are defined inside of inbound, outbound, and backend elements. In 
 ```xml
 <policies>
      <inbound>
-          <check-header name="Authorization" failed-check-httpcode="401" failed-check-error-message="Not authorized" ignore-case="false">
+          <check-header 
+               name="Authorization" 
+               failed-check-httpcode="401" 
+               failed-check-error-message="Not authorized" 
+               ignore-case="false">
                <value>demo1-232a021a-ac5c-4ce5-8f3e-c72559ea22d0</value>
                <value>demo2-eb5141fe-15bf-4fec-9164-cfd3ae2a80e3</value>
           </check-header>
           <set-header name="Authorization" exists-action="delete" />
           <rate-limit-by-key  
-                    calls="120"
-                    renewal-period="60"
-                    increment-condition="@(context.Response.StatusCode == 200)"
-                    counter-key="@(context.Request.IpAddress)" />
+               calls="120"
+               renewal-period="60"
+               increment-condition="@(context.Response.StatusCode == 200)"
+               counter-key="@(context.Request.IpAddress)" />
      </inbound>
      ...
 </policies>
@@ -150,7 +154,10 @@ To expose the `echo` method on Dapr service with ID of `echo-service` we will cr
 <policies>
      <inbound>
           <base />
-          <set-backend-service backend-id="dapr" dapr-app-id="echo-service" dapr-method="echo" />
+          <set-backend-service 
+               backend-id="dapr" 
+               dapr-app-id="echo-service" 
+               dapr-method="echo" />
      </inbound>
      ...
 </policies>
@@ -187,7 +194,8 @@ To expose the `messages` topic configured in the `demo-events` component we will
           topic="@("demo-events/messages")" 
           response-variable-name="pubsub-response"
         >@(context.Request.Body.As<string>())</publish-to-dapr>
-        <return-response response-variable-name="pubsub-response" />
+        <return-response 
+          response-variable-name="pubsub-response" />
     </inbound>
      ...
 </policies>
@@ -233,10 +241,11 @@ To accommodate that format, out policy will use templating engine called `liquid
 <policies>
     <inbound>
           <base />
-          <invoke-dapr-binding name="demo-binding" 
-                               operation="create" 
-                               template="liquid"
-                               response-variable-name="binding-response">
+          <invoke-dapr-binding 
+               name="demo-binding" 
+               operation="create" 
+               template="liquid"
+               response-variable-name="binding-response">
                <metadata>
                     <item key="source">APIM</item>
                     <item key="client-id">{{context.Request.Headers.Client-Id}}</item>
@@ -245,7 +254,8 @@ To accommodate that format, out policy will use templating engine called `liquid
                     {{context.Request.Body}}
                </data>
           </invoke-dapr-binding>
-          <return-response response-variable-name="binding-response" />
+          <return-response 
+               response-variable-name="binding-response" />
     </inbound>
      ...
 </policies>
