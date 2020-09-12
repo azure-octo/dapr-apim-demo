@@ -203,13 +203,20 @@ To expose the `demo-binding` binding we will create a policy that "in-lines" the
 ```xml
 <policies>
     <inbound>
-        <base />
-        <invoke-dapr-binding 
-            name="demo-binding"
-            operation="create" 
-            response-variable-name="binding-response"
-        >@(context.Request.Body.As<string>())</invoke-dapr-binding>
-        <return-response response-variable-name="binding-response" />
+          <base />
+          <invoke-dapr-binding name="demo-binding" 
+                               operation="create" 
+                               template="liquid"
+                               response-variable-name="binding-response">
+               <metadata>
+                    <item key="source">APIM</item>
+                    <item key="client-id">{{context.Request.Headers.ClientId}}</item>
+               </metadata>
+               <data>
+                    {{context.Request.Body}}
+               </data>
+          </invoke-dapr-binding>
+          <return-response response-variable-name="binding-response" />
     </inbound>
      ...
 </policies>
@@ -465,9 +472,10 @@ event - PubsubName:demo-events, Topic:messages, ID:24f0e6f0-ab29-4cd6-8617-6c6c3
 To trigger Dapr binding API exposed by APIM run:
 
 ```shell
-curl -X POST -d '{ "send": "ping" }' \
+curl -X POST -d '{ "query": "serverless", "lang": "en", "result": "recent" }' \
      -H "Content-Type: application/json" \
      -H "Authorization: demo3-fg8754fe-75eb-7cef-9876-dcf3ae2a99f1" \
+     -H "ClientId: id-123456789" \
      "http://${GATEWAY_IP}/trigger"
 ```
 
