@@ -21,7 +21,7 @@ In addition, we will overview the use of APIM tracing to debug your configuratio
 
 ## Setup 
 
-To make this demo easier to reproduce, start by exporting the name of the Azure API Management (APIM) service we will create.
+To make this demo easier to reproduce, start by exporting the name for your new Azure API Management (APIM) service.
 
 > Note, the name of your API Management service instance has to be globally unique!
 
@@ -29,7 +29,7 @@ To make this demo easier to reproduce, start by exporting the name of the Azure 
 export APIM_SERVICE_NAME="dapr-apim-demo"
 ```
 
-In addition to the above name, also export the Azure [Subscription ID](https://docs.bitnami.com/azure/faq/administration/find-subscription-id/) and [Resource Group](https://docs.bitnami.com/azure/faq/administration/find-deployment-resourcegroup-id/) where you would like to create this APIM service.
+In addition also export the Azure [Subscription ID](https://docs.bitnami.com/azure/faq/administration/find-subscription-id/) and [Resource Group](https://docs.bitnami.com/azure/faq/administration/find-deployment-resourcegroup-id/) where you want to create that service.
 
 ```shell
 export AZ_SUBSCRIPTION_ID="your-subscription-id"
