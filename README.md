@@ -198,7 +198,23 @@ If everything goes well, the management API will return the created policy.
 
 #### Trigger Binding Policy 
 
-To expose the `demo-binding` binding we will create a policy that "in-lines" the global policy (`<base />`) and set publishes the request payload to Dapr binding API:
+In our final case, we are going to overview exposing the Dapr binding API using policy that, in contrast to the previous ones, doesn't simply forwards the originally data but rather creates brand new request based on the client request content. 
+
+The payload expected by Dapr binding API looks like this: 
+
+```json
+{
+  "data": "",
+  "metadata": {
+    "": ""
+  },
+  "operation": ""
+}
+```
+
+To accommodate that format, out policy will compose a new request and use that to invoke the backing Dapr binding API. This capability comes handy when your API needs to stay the same while the API exposed by the backing service evolves. 
+
+Like before, we start by inheriting from the global policy (`<base />`) and setting the binding and its operation names. We will also use templating engine called `liquid` for simpler content selection. For the metadata, this policy creates a static `source` element, and a dynamic `client-id` element which is based on the value of the original client request header attribute. For data, we simply use the complete content of the client request.
 
 ```xml
 <policies>
