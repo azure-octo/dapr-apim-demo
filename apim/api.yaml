@@ -47,9 +47,3 @@ paths:
       responses:
         '200':
           description: ''
-components:
-  securitySchemes:
-    apiKeyHeader:
-      type: apiKey
-      name: dapr-api-key
-      in: header

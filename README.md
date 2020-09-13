@@ -252,7 +252,7 @@ To accommodate that format, out policy will also use templating engine called [l
                response-variable-name="binding-response">
                <metadata>
                     <item key="source">APIM</item>
-                    <item key="client-id">{{context.Request.Headers.client-id}}</item>
+                    <item key="client-id">{{context.Request.Headers.Client-Id}}</item>
                </metadata>
                <data>
                     {{context.Request.Body}}
@@ -483,8 +483,8 @@ To invoke the backing gRPC service over Dapr API exposed by APIM run:
 
 ```shell
 curl -i -X POST -d '{ "message": "hello" }' \
-     -H "content-type: application/json" \
-     -H "dapr-api-key: ${AZ_API_SUB_KEY}" \
+     -H "Content-Type: application/json" \
+     -H "Ocp-Apim-Subscription-Key: ${AZ_API_SUB_KEY}" \
      "http://${GATEWAY_IP}/echo"
 ```
 
@@ -507,8 +507,8 @@ To post a message to the Dapr Pub/Sub API exposed on APIM run:
 ```shell
 curl -i -X POST \
      -d '{ "content": "hello" }' \
-     -H "content-type: application/json" \
-     -H "dapr-api-key: ${AZ_API_SUB_KEY}" \
+     -H "Content-Type: application/json" \
+     -H "Ocp-Apim-Subscription-Key: ${AZ_API_SUB_KEY}" \
      "http://${GATEWAY_IP}/message"
 ```
 
@@ -532,9 +532,9 @@ To trigger Dapr binding API exposed by APIM run:
 
 ```shell
 curl -X POST -d '{ "query": "serverless", "lang": "en", "result": "recent" }' \
-     -H "content-type: application/json" \
-     -H "dapr-api-key: ${AZ_API_SUB_KEY}" \
-     -H "client-id: id-123456789" \
+     -H "Content-Type: application/json" \
+     -H "Ocp-Apim-Subscription-Key: ${AZ_API_SUB_KEY}" \
+     -H "Client-Id: id-123456789" \
      "http://${GATEWAY_IP}/query"
 ```
 
@@ -551,7 +551,6 @@ APIM provides tracing which is helpful to debug policies. To take advantage of t
 ```shell
 curl -v -X POST -d '{ "message": "hello" }' \
      -H "Content-Type: application/json" \
-     -H "dapr-api-key: ${AZ_API_SUB_KEY}" \
      -H "Ocp-Apim-Subscription-Key: ${AZ_API_SUB_KEY}" \
      -H "Ocp-Apim-Trace: true" \
      "http://${GATEWAY_IP}/message"
