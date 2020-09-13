@@ -216,7 +216,7 @@ curl -i -X PUT \
 
 If everything goes well, the management API will return the created policy.
 
-#### Trigger Binding Policy 
+#### Query Binding Policy 
 
 In our final case, we are going to overview exposing the Dapr binding API.
 
@@ -335,7 +335,9 @@ kubectl rollout status statefulset.apps/redis-slave
 
 ### Dapr Components 
 
-Dapr's modular design means that we can easily extend its functionality using [components](https://github.com/dapr/docs/tree/master/concepts#components). The specific implementation for these components is done in configuration which means that it's also easy to swap them at runtime without the need to modify your code. 
+Dapr's modular design means that we can easily extend its functionality using [components](https://github.com/dapr/docs/tree/master/concepts#components). The specific implementation for these components which can be any number of the readily available Dapr building blocks is done in configuration which means that it's also easy to swap them at runtime without the need to modify your code. 
+
+![](img/dapr-building-blocks.png)
 
 To create the binding component to point to the above created Redis cluster the configuration looks like this:
 
@@ -555,9 +557,9 @@ There should be an entry similar to this:
 event - PubsubName:demo-events, Topic:messages, ID:24f0e6f0-ab29-4cd6-8617-6c6c36ac1171, Data: map[message:hello]
 ```
 
-### Binding Triggering
+### Binding Invocation
 
-To trigger Dapr binding API exposed by APIM run:
+To query the Dapr binding API exposed by APIM run:
 
 ```shell
 curl -X POST -d '{ "query": "serverless", "lang": "en", "result": "recent" }' \
