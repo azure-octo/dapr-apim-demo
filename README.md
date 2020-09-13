@@ -485,6 +485,7 @@ To invoke the backing gRPC service over Dapr API exposed by APIM run:
 curl -i -X POST -d '{ "message": "hello" }' \
      -H "Content-Type: application/json" \
      -H "Ocp-Apim-Subscription-Key: ${AZ_API_SUB_KEY}" \
+     -H "Ocp-Apim-Trace: true" \
      "http://${GATEWAY_IP}/echo"
 ```
 
@@ -509,6 +510,7 @@ curl -i -X POST \
      -d '{ "content": "hello" }' \
      -H "Content-Type: application/json" \
      -H "Ocp-Apim-Subscription-Key: ${AZ_API_SUB_KEY}" \
+     -H "Ocp-Apim-Trace: true" \
      "http://${GATEWAY_IP}/message"
 ```
 
@@ -534,6 +536,7 @@ To trigger Dapr binding API exposed by APIM run:
 curl -X POST -d '{ "query": "serverless", "lang": "en", "result": "recent" }' \
      -H "Content-Type: application/json" \
      -H "Ocp-Apim-Subscription-Key: ${AZ_API_SUB_KEY}" \
+     -H "Ocp-Apim-Trace: true" \
      -H "Client-Id: id-123456789" \
      "http://${GATEWAY_IP}/query"
 ```
@@ -546,29 +549,8 @@ This demo illustrates how to setup the APIM service and deploy your self-hosted 
 
 ### Debugging 
 
-APIM provides tracing which is helpful to debug policies. To take advantage of this feature you will need to include `Ocp-Apim-Trace` attribute indicating that you want to trace this request, and `Ocp-Apim-Subscription-Key` attribute for which we can use the `$AZ_API_SUB_KEY` we've exported before. 
+Notice in each one of our API invocations we have been including the `Ocp-Apim-Trace: true`. APIM provides an ability to trace requests across the policy execution chain which is helpful policy debugging. The response of each one fo the above invocation includes the `Ocp-Apim-Trace-Location` header parameter. Just paste the value of that parameter into your browser to get the full trace stack in JSON. The full stack can get pretty long so here are few Dapr-specific snippets: 
 
-```shell
-curl -v -X POST -d '{ "message": "hello" }' \
-     -H "Content-Type: application/json" \
-     -H "Ocp-Apim-Subscription-Key: ${AZ_API_SUB_KEY}" \
-     -H "Ocp-Apim-Trace: true" \
-     "http://${GATEWAY_IP}/message"
-```
-
-The response of our invocation will now also include the `Ocp-Apim-Trace-Location` header parameter which will hold the URL to where you can view your trace. Paste that URL into browser to get the full trace: 
-
-```json
-{
-    "traceId": "05131509-7442-4cce-89d4-35271921ac42",
-    "traceEntries": {
-        "inbound": [...],
-        "outbound": [...]
-    }
-}
-```
-
-The details of the trace are long. For example you will be able to see the message that was forwarded to Dapr API and what was its response:
 
 ```json 
 ...
