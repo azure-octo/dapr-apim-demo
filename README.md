@@ -173,7 +173,9 @@ curl -i -X PUT \
      "https://management.azure.com/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}/providers/Microsoft.ApiManagement/service/${APIM_SERVICE_NAME}/apis/dapr/operations/echo/policies/policy?api-version=2019-12-01"
 ```
 
-If everything goes well, the management API will return the created policy.
+If everything goes well, the management API will return the created policy. And, since the external mapping of the API user invocations to Dapr is done in APIM policy, it can be easily re-mapped to any other version as the API implementation evolves over time. 
+
+![](img/backend-policy.png)
 
 #### Message Topic Policy 
 
