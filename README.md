@@ -310,9 +310,9 @@ Switching now to the Kubernetes cluster...
 
 ### Dependencies 
 
-To showcase the ability to expose Dapr pub/sub and binding APIs in APIM, we are going to need Dapr components configured on the cluster. 
+To showcase the ability to expose Dapr pub/sub and binding APIs in APIM, we are going to need [Dapr components](https://github.com/dapr/docs/tree/master/concepts#components) configured on the cluster. 
 
-> Note, to keep things simple for this demo we will use Redis as both pub/sub and binding backing service but you can substitute it for any one of the 75+ different components Dapr offers today.
+> Note, while Dapr supports some 75+ different components, to keep things simple in this demo we will use Redis as both pub/sub and binding backing service
 
 Start with adding the Redis repo to your Helm charts:
 
@@ -333,7 +333,31 @@ kubectl rollout status statefulset.apps/redis-slave
 
 ### Dapr Components 
 
-When done, deploy the Dapr components:
+Dapr's modular design means that we can easily extend its functionality using [components](https://github.com/dapr/docs/tree/master/concepts#components). The specific implementation for these components is done in configuration which means that it's also easy to swap them at runtime without the need to modify your code. 
+
+To create the binding component to point to the above created Redis cluster the configuration looks like this:
+
+```yaml
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: demo-events
+spec:
+  type: pubsub.redis
+  metadata:
+  - name: redisHost
+    value: redis-master.default.svc.cluster.local:6379
+  - name: redisPassword
+    secretKeyRef:
+      name: redis
+      key: redis-password
+  - name: allowedTopics
+    value: "messages"
+```
+
+Notice we are using the secret created by Redis for password so that our configuration doesn't include any secure information. We also specify that only the `messages` topic should be supported in this case. 
+
+To apply these component configurations run: 
 
 ```shell
 kubectl apply -f k8s/pubsub.yaml
@@ -357,17 +381,18 @@ kubectl logs -l app=demo-apim-gateway -c daprd --tail=200
 
 ### Dapr Services 
 
-To deploy your application as a Dapr service you will need to decorate your Kubernetes deployment template with few Dapr annotations.
+To deploy your application as a Dapr service all you need to do is augment your Kubernetes deployment template with few Dapr annotations.
 
 ```yaml
 annotations:
      dapr.io/enabled: "true"
-     dapr.io/app-id: "name-of-your-deployment"
+     dapr.io/id: "event-subscriber"
+     dapr.io/port: "8080"
 ```
 
 > To learn more about Kubernetes sidecar configuration see [Dapr docs](https://github.com/dapr/docs/blob/master/concepts/configuration/README.md#kubernetes-sidecar-configuration).
 
-For this demo we will use a pre-build Docker images of two applications: [gRPC Echo Service](https://github.com/mchmarny/dapr-demos/tree/master/grpc-echo-service) and [HTTP Event Subscriber Service](https://github.com/mchmarny/dapr-demos/tree/master/http-event-subscriber). The Kubernetes deployments for both of these are located here:
+For this demo we will use a pre-build Docker images of two applications: [gRPC Echo Service](https://github.com/mchmarny/dapr-demos/tree/master/grpc-echo-service) and [HTTP Event Subscriber Service](https://github.com/mchmarny/dapr-demos/tree/master/http-event-subscriber). The Kubernetes deployment files for both of these are located here:
 
 * [k8s/echo-service.yaml](k8s/echo-service.yaml)
 * [k8s/event-subscriber.yaml](k8s/event-subscriber.yaml)
@@ -380,7 +405,7 @@ kubectl apply -f k8s/event-subscriber.yaml
 kubectl get pods -l demo=dapr-apim -w
 ```
 
-> Service is ready when its status is `Running` and the ready column is `2/2` (Dapr and our echo service both started)
+> Service is ready when its status is `Running` and the ready column is `2/2` (Dapr and our echo service containers both started)
 
 ```shell
 NAME                                READY   STATUS    RESTARTS   AGE
