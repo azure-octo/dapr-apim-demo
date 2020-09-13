@@ -427,7 +427,7 @@ Now, create a config map containing the APIM service endpoint that will be used 
 
 ```shell
 kubectl create configmap demo-apim-gateway-env --from-literal \
-     "config.service.endpoint=https://dapr-apim-demo.management.azure-api.net/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}/providers/Microsoft.ApiManagement/service/${APIM_SERVICE_NAME}?api-version=2019-12-01"
+     "config.service.endpoint=https://${APIM_SERVICE_NAME}.management.azure-api.net/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}/providers/Microsoft.ApiManagement/service/${APIM_SERVICE_NAME}?api-version=2019-12-01"
 ```
 
 And finally, deploy the gateway and check that it's ready:
