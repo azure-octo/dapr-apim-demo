@@ -173,7 +173,9 @@ curl -i -X PUT \
      "https://management.azure.com/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}/providers/Microsoft.ApiManagement/service/${APIM_SERVICE_NAME}/apis/dapr/operations/echo/policies/policy?api-version=2019-12-01"
 ```
 
-If everything goes well, the management API will return the created policy. And, since the external mapping of the API user invocations to Dapr is done in APIM policy, it can be easily re-mapped to any other version as the API implementation evolves over time. 
+If everything goes well, the management API will return the created policy. Additional information about Dapr Service Invocation in APIM are available [here](https://aka.ms/apim/dapr/invoke). 
+
+Also, since the external mapping of the API user invocations to Dapr is done in APIM policy, it can be easily re-mapped to any other version as the API implementation evolves over time. 
 
 ![](img/backend-policy.png)
 
@@ -214,7 +216,7 @@ curl -i -X PUT \
      "https://management.azure.com/subscriptions/${AZ_SUBSCRIPTION_ID}/resourceGroups/${AZ_RESOURCE_GROUP}/providers/Microsoft.ApiManagement/service/${APIM_SERVICE_NAME}/apis/dapr/operations/message/policies/policy?api-version=2019-12-01"
 ```
 
-If everything goes well, the management API will return the created policy.
+If everything goes well, the management API will return the created policy. Additional information about Dapr Pub/Sub support in APIM are available [here](https://aka.ms/apim/dapr/pubsub).
 
 #### Query Binding Policy 
 
@@ -280,8 +282,8 @@ curl -i -X PUT \
 
 > Note, the support in APIM for bindings is still rolling out across Azure regions. You can safely skip this section and just demo service invocation and topic publishing if you receive an error that `invoke-dapr-binding` is not recognize.
 
-If everything goes well, the management API will return the created policy.
-
+If everything goes well, the management API will return the created policy. Additional information about Dapr Binding support in APIM are available [here](https://aka.ms/apim/dapr/bind). 
+ 
 ### Gateway Configuration
 
 To create a self-hosted gateway which will be then deployed to the Kubernetes cluster, first, we need to create the `demo-apim-gateway` object in APIM:
