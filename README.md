@@ -308,7 +308,7 @@ If everything goes well, the API returns JSON of the created objects.
 
 Switching now to the Kubernetes cluster...
 
-### Dependency 
+### Dependencies 
 
 To showcase the ability to expose Dapr pub/sub and binding APIs in APIM, we are going to need Dapr components configured on the cluster. 
 
@@ -326,12 +326,12 @@ And install Redis and wait for the deployment to complete:
 > Note, for simplicity, we are deploying everything into the `default` namespace.
 
 ```shell
-helm install redis bitnami/redis 
+helm install redis bitnami/redis  
 kubectl rollout status statefulset.apps/redis-master
 kubectl rollout status statefulset.apps/redis-slave
 ```
 
-### Components 
+### Dapr Components 
 
 When done, deploy the Dapr components:
 
