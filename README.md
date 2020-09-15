@@ -239,31 +239,28 @@ In contrast to the previous policies, rather than just forwarding the original r
 }
 ```
 
-To accommodate that format, out policy will also use templating engine called [liquid](https://docs.microsoft.com/en-us/azure/api-management/api-management-transformation-policies#using-liquid-templates-with-set-body).
+To accommodate that format, out policy will set `operation` attribute in APIM `invoke-dapr-binding` policy,
+and set `metadata` items to:
 
-* The `operation` will be set by the `operation` attribute in APIM `invoke-dapr-binding` policy. 
-* For the `metadata` expected by DAPR, we will create a `source` element with a static `APIM` value. And for the `client-id` element the policy will select the original client request header attribute `Client-Id`.
-* Finally, for `data`, we simply use the original content of the client request.
+* `source` which will be a static value (`APIM`)
+* `client-ip` which will be set to the API client IP
+* `key` which will be set to the client request header attribute `Request-Id` 
+
+Finally, for `data`, we simply use the original content of the client request.
 
 ```xml
 <policies>
     <inbound>
-          <base />
-          <invoke-dapr-binding 
-               name="demo-binding" 
-               operation="create" 
-               template="liquid"
-               response-variable-name="binding-response">
-               <metadata>
-                    <item key="source">APIM</item>
-                    <item key="client-id">{{context.Request.Headers.Client-Id}}</item>
-               </metadata>
-               <data>
-                    {{context.Request.Body}}
-               </data>
-          </invoke-dapr-binding>
-          <return-response 
-               response-variable-name="binding-response" />
+        <base />
+        <invoke-dapr-binding name="demo-binding" operation="create" response-variable-name="binding-response">
+            <metadata>
+                <item key="source">APIM</item>
+                <item key="client-ip">@( context.Request.IpAddress )</item>
+                <item key="key">@( context.Request.Headers.GetValueOrDefault("Request-Id", "") )</item>
+            </metadata>
+            <data>@( context.Request.Body.As<string>() )</data>
+        </invoke-dapr-binding>
+        <return-response response-variable-name="binding-response" />
     </inbound>
      ...
 </policies>
@@ -507,7 +504,6 @@ The response will include both the primary and secondary keys. Copy one of them 
 export AZ_API_SUB_KEY="your-api-subscription-key"
 ```
 
-
 ### Service Invocation 
 
 To invoke the backing gRPC service over Dapr API exposed by APIM run:
@@ -564,11 +560,11 @@ event - PubsubName:demo-events, Topic:messages, ID:24f0e6f0-ab29-4cd6-8617-6c6c3
 To query the Dapr binding API exposed by APIM run:
 
 ```shell
-curl -X POST -d '{ "query": "serverless", "lang": "en", "result": "recent" }' \
+curl -i -X POST -d '{ "query": "serverless", "lang": "en", "result": "recent" }' \
      -H "Content-Type: application/json" \
      -H "Ocp-Apim-Subscription-Key: ${AZ_API_SUB_KEY}" \
      -H "Ocp-Apim-Trace: true" \
-     -H "Client-Id: id-123456789" \
+     -H "Request-Id: id-123456789" \
      "http://${GATEWAY_IP}/query"
 ```
 
