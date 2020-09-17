@@ -421,7 +421,7 @@ subscribing to topic=messages on pubsub=demo-events
 
 ### Self-hosted APIM Gateway 
 
-To connect the self-hosted gateway to APIM service, we will need to create a Kubernetes secret with the APIM gateway key. Start by getting the key which your gateway will use to connect to from APIM:
+To connect the [self-hosted gateway](https://docs.microsoft.com/en-us/azure/api-management/how-to-deploy-self-hosted-gateway-kubernetes) to [APIM service on Kubernetes](https://docs.microsoft.com/en-us/azure/api-management/api-management-kubernetes), we will need to create a secret with the APIM gateway key. Start by getting the key which your gateway will use to connect to from APIM:
 
 > Note, the maximum validity for access tokens is 30 days. Update the below `expiry` parameter to be withing 30 days from today
 
