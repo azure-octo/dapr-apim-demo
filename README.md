@@ -384,7 +384,7 @@ annotations:
 
 > To learn more about Kubernetes sidecar configuration see [Dapr docs](https://github.com/dapr/docs/blob/master/concepts/configuration/README.md#kubernetes-sidecar-configuration).
 
-For this demo we will use a pre-build Docker images of two applications: [gRPC Echo Service](https://github.com/mchmarny/dapr-demos/tree/master/grpc-echo-service) and [HTTP Event Subscriber Service](https://github.com/mchmarny/dapr-demos/tree/master/http-event-subscriber). The Kubernetes deployment files for both of these are located here:
+For this demo we will use pre-build Docker images of two applications: [gRPC Echo Service](src/grpc-echo-service) and [HTTP Event Subscriber](src/http-event-subscriber). The Kubernetes deployment files for both of these are located here:
 
 * [k8s/echo-service.yaml](k8s/echo-service.yaml)
 * [k8s/event-subscriber.yaml](k8s/event-subscriber.yaml)
@@ -561,7 +561,7 @@ If everything is configured correctly, you will see `200` status code in the hea
 
 ### Debugging 
 
-Notice in each one of our API invocations we have been including the `Ocp-Apim-Trace: true` header parameter. APIM provides an ability to trace requests across the policy execution chain which is helps in debugging your policy. The response of each one fo the above invocation includes the `Ocp-Apim-Trace-Location` header parameter. Just paste the value of that parameter into your browser to see the full trace stack in JSON. The trace can get pretty long so here are few Dapr-specific snippets: 
+Notice in each one of our API invocations we have been including the `Ocp-Apim-Trace: true` header parameter. APIM provides an ability to trace requests across the policy execution chain which is helpful in debugging your policy. The response of each one fo the above invocation includes the `Ocp-Apim-Trace-Location` header parameter. Just paste the value of that parameter into your browser to see the full trace stack in JSON. The trace can get pretty long so here are few Dapr-specific snippets: 
 
 
 ```json 
