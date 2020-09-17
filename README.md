@@ -371,21 +371,6 @@ kubectl apply -f k8s/pubsub.yaml
 kubectl apply -f k8s/binding.yaml
 ```
 
-> Note, if you updated components after deploying the gateway you will need to restart the deployments.
-
-```shell
-kubectl rollout restart deployment/event-subscriber
-kubectl rollout status deployment/event-subscriber
-kubectl rollout restart deployment/demo-apim-gateway
-kubectl rollout status deployment/demo-apim-gateway
-```
-
-To check if the components were registered correctly in Dapr, inspect the `daprd` logs in `demo-apim-gateway` pod for `demo-events` and `demo-binding`:
-
-```shell
-kubectl logs -l app=demo-apim-gateway -c daprd --tail=200
-```
-
 ### Dapr Services 
 
 To deploy your application as a Dapr service all you need to do is augment your Kubernetes deployment template with few Dapr annotations.
@@ -625,6 +610,23 @@ Notice in each one of our API invocations we have been including the `Ocp-Apim-T
     }
 }
 ...
+```
+
+## Updating Dapr Components 
+
+If you updated components after deploying the gateway you will need to restart the deployments:
+
+```shell
+kubectl rollout restart deployment/event-subscriber
+kubectl rollout status deployment/event-subscriber
+kubectl rollout restart deployment/demo-apim-gateway
+kubectl rollout status deployment/demo-apim-gateway
+```
+
+To check if the components were registered correctly in Dapr, inspect the `daprd` logs in `demo-apim-gateway` pod for `demo-events` and `demo-binding`:
+
+```shell
+kubectl logs -l app=demo-apim-gateway -c daprd --tail=200
 ```
 
 ## Summary 
